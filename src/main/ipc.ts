@@ -1,4 +1,6 @@
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
 import { scanDirectory } from './scanner'
 import { insertImage, getAllImages, insertTag, linkImageTag, getAllTags, getImage, getTag, getImagesByTag, clearDatabase, getUnprocessedImages, markImageProcessed, resetProcessed, toggleFavoriteTag, getTagsForImage, getSettings, updateSettings } from './db'
 import { generateTags } from './tagger'
@@ -80,6 +82,25 @@ export function setupIPC(mainWindow: BrowserWindow) {
             currentTargetThreads = settings.threadCount
         }
         return await updateSettings.run(settings)
+    })
+
+    ipcMain.handle('lib:rescan', async () => {
+        const images = await getAllImages.all()
+        console.log(`[IPC] Rescanning library: ${images.length} images in DB`)
+
+        let removed = 0
+        for (const img of images) {
+            if (!fs.existsSync(img.filepath)) {
+                await deleteImageByPath.run({ filepath: img.filepath })
+                removed++
+            }
+        }
+        console.log(`[IPC] Rescan: removed ${removed} missing images.`)
+
+        await resetProcessed.run()
+        // Start processing queue in background
+        processQueue(mainWindow)
+        return { success: true, removedCount: removed }
     })
 }
 

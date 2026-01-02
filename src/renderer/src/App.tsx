@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Hash, FolderOpen, Image as ImageIcon, Loader2, Settings, Trash2, ArrowUpDown, Star, Search, X } from 'lucide-react'
+import { Hash, FolderOpen, Image as ImageIcon, Loader2, Settings, Trash2, ArrowUpDown, Star, Search, X, RefreshCw, AlertTriangle } from 'lucide-react'
 import type { Image, Tag } from './types'
 
 function App(): JSX.Element {
@@ -655,21 +655,46 @@ function App(): JSX.Element {
                             <div className="h-px bg-gray-800" />
 
                             {/* Database Operations */}
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <label className="text-sm font-semibold text-gray-300">Library Management</label>
-                                <button
-                                    onClick={() => {
-                                        handleClearLibrary()
-                                        setShowSettings(false)
-                                    }}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                    Clear All Library Data
-                                </button>
-                                <p className="text-[10px] text-gray-600 text-center">
-                                    This will reset your entire library, including all tags and image associations.
-                                </p>
+
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => {
+                                            handleRescanLibrary()
+                                            setShowSettings(false)
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+                                    >
+                                        <RefreshCw className="w-4 h-4" />
+                                        Rescan Library (Maintenance)
+                                    </button>
+                                    <p className="text-[10px] text-gray-500 px-1">
+                                        Checks for missing files and re-analyzes all images in the library.
+                                    </p>
+                                </div>
+
+                                <div className="pt-2 space-y-2">
+                                    <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                        <p className="text-[10px] text-red-400 font-bold flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" />
+                                            DANGER ZONE
+                                        </p>
+                                        <p className="text-[9px] text-red-500/70 mt-0.5">
+                                            Destructive action. Resets all tags and associations.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            handleClearLibrary()
+                                            setShowSettings(false)
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/5 hover:bg-red-500/20 text-red-500/60 hover:text-red-400 border border-red-500/10 hover:border-red-500/30 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Clear All Library Data
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
