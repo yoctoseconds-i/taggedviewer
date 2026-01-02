@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Hash, FolderOpen, Image as ImageIcon, Loader2, Settings, Trash2, ArrowUpDown, Star } from 'lucide-react'
+import { Hash, FolderOpen, Image as ImageIcon, Loader2, Settings, Trash2, ArrowUpDown, Star, Search, X } from 'lucide-react'
 import type { Image, Tag } from './types'
 
 function App(): JSX.Element {
@@ -14,6 +14,9 @@ function App(): JSX.Element {
     const [uiVisible, setUiVisible] = useState(false)
     const [showDebugMenu, setShowDebugMenu] = useState(false)
     const [tagSort, setTagSort] = useState<'name' | 'count'>('count')
+    const [tagSearchTerm, setTagSearchTerm] = useState('')
+    const [showSettings, setShowSettings] = useState(false)
+    const [settings, setSettings] = useState<{ threadCount: number }>({ threadCount: 2 })
 
     // Unified data loading
     const loadData = async () => {
@@ -110,6 +113,16 @@ function App(): JSX.Element {
         return sortedTags.filter(t => t.is_favorite)
     }, [sortedTags])
 
+    const searchableTags = useMemo(() => {
+        if (!tagSearchTerm.trim()) return sortedTags
+        const term = tagSearchTerm.toLowerCase()
+        return sortedTags.filter(t => t.name.toLowerCase().includes(term))
+    }, [sortedTags, tagSearchTerm])
+
+    const favoriteSearchableTags = useMemo(() => {
+        return searchableTags.filter(t => t.is_favorite)
+    }, [searchableTags])
+
     useEffect(() => {
         loadData()
     }, [activeTag]) // Reload when activeTag changes
@@ -191,19 +204,27 @@ function App(): JSX.Element {
         }
     }, [isScanning])
 
-    // Resume scanning on mount
+    // Resume scanning on mount and load settings
     useEffect(() => {
-        const resumeScan = async () => {
+        const init = async () => {
             // @ts-ignore
-            // We blindly try to resume. If there are items, the backend will process them.
-            // We set isScanning to true initially to handle the UI state if it actually runs.
-            // Ideally we would check pending count first to avoid UI flash, but this meets requirements.
+            const savedSettings = await window.electron.ipcRenderer.invoke('settings:get')
+            if (savedSettings) setSettings(savedSettings)
+
             setIsScanning(true)
+            // @ts-ignore
             await window.electron.ipcRenderer.invoke('scan:resume')
             setIsScanning(false)
         }
-        resumeScan()
+        init()
     }, [])
+
+    const handleUpdateThreadCount = async (count: number) => {
+        const newSettings = { ...settings, threadCount: count }
+        setSettings(newSettings)
+        // @ts-ignore
+        await window.electron.ipcRenderer.invoke('settings:set', newSettings)
+    }
 
     const handleOpenFolder = async () => {
         // @ts-ignore
@@ -238,25 +259,12 @@ function App(): JSX.Element {
                             <ArrowUpDown className="w-4 h-4" />
                         </button>
                         <button
-                            onClick={() => setShowDebugMenu(!showDebugMenu)}
+                            onClick={() => setShowSettings(true)}
                             className="text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-gray-800"
                         >
                             <Settings className="w-4 h-4" />
                         </button>
                     </div>
-
-                    {/* Debug Menu Dropdown */}
-                    {showDebugMenu && (
-                        <div className="absolute top-14 right-2 w-48 bg-gray-900 border border-gray-700 rounded-md shadow-xl overflow-hidden z-50">
-                            <button
-                                onClick={handleClearLibrary}
-                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-gray-800 hover:text-red-300 flex items-center space-x-2 transition-colors"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                <span>Clear Library Data</span>
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 <div className="p-4">
@@ -287,6 +295,27 @@ function App(): JSX.Element {
                     )}
                 </div>
 
+                <div className="px-4 pb-2">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-indigo-400 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search tags..."
+                            value={tagSearchTerm}
+                            onChange={(e) => setTagSearchTerm(e.target.value)}
+                            className="w-full bg-gray-950 border border-gray-800 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all placeholder:text-gray-600"
+                        />
+                        {tagSearchTerm && (
+                            <button
+                                onClick={() => setTagSearchTerm('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-800 rounded-md text-gray-500 hover:text-white transition-all"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5 scrollbar-thin scrollbar-thumb-gray-800">
                     <div className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-4">
                         Library
@@ -302,14 +331,14 @@ function App(): JSX.Element {
                         <span>All Photos</span>
                     </button>
 
-                    {favoriteTags.length > 0 && (
+                    {favoriteSearchableTags.length > 0 && (
                         <>
                             <div className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-6 flex items-center gap-2">
                                 <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
                                 Favorites
                             </div>
                             <div className="space-y-0.5">
-                                {favoriteTags.map(tag => (
+                                {favoriteSearchableTags.map(tag => (
                                     <button
                                         key={`fav-${tag.id}`}
                                         onClick={() => setActiveTag(tag.name)}
@@ -345,7 +374,7 @@ function App(): JSX.Element {
                         Tags
                     </div>
                     <div className="space-y-0.5">
-                        {sortedTags.map(tag => (
+                        {searchableTags.map(tag => (
                             <button
                                 key={tag.id}
                                 onClick={() => setActiveTag(tag.name)}
@@ -551,8 +580,8 @@ function App(): JSX.Element {
                                                         setSelectedImageIndex(null)
                                                     }}
                                                     className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all border shadow-sm ${tag.is_favorite
-                                                            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20 active:scale-95'
-                                                            : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10 hover:text-white active:scale-95'
+                                                        ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20 active:scale-95'
+                                                        : 'bg-white/5 text-gray-400 border-white/5 hover:bg-white/10 hover:text-white active:scale-95'
                                                         }`}
                                                 >
                                                     <Hash className={`w-4 h-4 ${tag.is_favorite ? 'text-yellow-500' : 'opacity-30'}`} />
@@ -571,6 +600,90 @@ function App(): JSX.Element {
                     </div>
                 )}
             </main>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setShowSettings(false)}
+                >
+                    <div
+                        className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Settings className="w-5 h-5 text-indigo-400" />
+                                Settings
+                            </h2>
+                            <button
+                                onClick={() => setShowSettings(false)}
+                                className="p-1 hover:bg-gray-800 rounded-lg text-gray-500 hover:text-white transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Multithreading Setting */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-gray-300 flex items-center justify-between">
+                                    Analysis Threads
+                                    <span className="text-indigo-400 font-mono text-xs bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                                        {settings.threadCount} threads
+                                    </span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="8"
+                                    step="1"
+                                    value={settings.threadCount}
+                                    onChange={(e) => handleUpdateThreadCount(parseInt(e.target.value))}
+                                    className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                />
+                                <div className="flex justify-between text-[10px] text-gray-500 font-medium">
+                                    <span>Single (Stable)</span>
+                                    <span>Faster</span>
+                                    <span>Aggressive</span>
+                                </div>
+                                <p className="text-xs text-gray-500 leading-relaxed bg-gray-950/50 p-3 rounded-lg border border-gray-800">
+                                    Determines how many images are analyzed simultaneously. Higher values speed up scanning but consume more GPU/CPU resources.
+                                </p>
+                            </div>
+
+                            <div className="h-px bg-gray-800" />
+
+                            {/* Database Operations */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-gray-300">Library Management</label>
+                                <button
+                                    onClick={() => {
+                                        handleClearLibrary()
+                                        setShowSettings(false)
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Clear All Library Data
+                                </button>
+                                <p className="text-[10px] text-gray-600 text-center">
+                                    This will reset your entire library, including all tags and image associations.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-950/50 border-t border-gray-800 flex justify-end">
+                            <button
+                                onClick={() => setShowSettings(false)}
+                                className="px-5 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-xl transition-all active:scale-95"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

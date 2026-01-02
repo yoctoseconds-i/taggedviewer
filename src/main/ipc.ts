@@ -1,7 +1,9 @@
 import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import { scanDirectory } from './scanner'
-import { insertImage, getAllImages, insertTag, linkImageTag, getAllTags, getImage, getTag, getImagesByTag, clearDatabase, getUnprocessedImages, markImageProcessed, resetProcessed, toggleFavoriteTag, getTagsForImage } from './db'
+import { insertImage, getAllImages, insertTag, linkImageTag, getAllTags, getImage, getTag, getImagesByTag, clearDatabase, getUnprocessedImages, markImageProcessed, resetProcessed, toggleFavoriteTag, getTagsForImage, getSettings, updateSettings } from './db'
 import { generateTags } from './tagger'
+
+let currentTargetThreads = 2
 
 export function setupIPC(mainWindow: BrowserWindow) {
     ipcMain.handle('db:resetProcessed', async () => {
@@ -68,61 +70,105 @@ export function setupIPC(mainWindow: BrowserWindow) {
         shell.showItemInFolder(filepath)
         return true
     })
+    ipcMain.handle('settings:get', async () => {
+        const settings = await getSettings.get()
+        currentTargetThreads = settings.threadCount
+        return settings
+    })
+    ipcMain.handle('settings:set', async (_, settings: any) => {
+        if (settings.threadCount !== undefined) {
+            currentTargetThreads = settings.threadCount
+        }
+        return await updateSettings.run(settings)
+    })
 }
 
 async function processQueue(win: BrowserWindow) {
-    // @ts-ignore
     const queue = await getUnprocessedImages.get()
-    console.log(`[IPC] processQueue found ${queue.length} unprocessed images.`)
+    const settings = await getSettings.get()
+    currentTargetThreads = settings.threadCount || 2
+
+    console.log(`[IPC] processQueue found ${queue.length} unprocessed images. Initial Threads: ${currentTargetThreads}`)
     let processedCount = 0
     const totalToProcess = queue.length
+    let activeWorkers = 0
 
-    // If nothing to process, we can return early or just return count 0
     if (totalToProcess === 0) return { success: true, count: 0 }
 
-    // Send initial progress for processing phase
     if (!win.isDestroyed()) {
         win.webContents.send('scan:progress', { total: totalToProcess, current: 0 })
     }
 
-    for (const image of queue) {
-        if (win.isDestroyed()) break
+    const startWorker = async (workerIndex: number) => {
+        activeWorkers++
+        console.log(`[IPC] Worker ${workerIndex} started. Total active: ${activeWorkers}`)
 
-        try {
-            const tags = await generateTags(image.filepath)
-            const imageTags: any[] = []
+        while (queue.length > 0) {
+            if (win.isDestroyed()) break
 
-            if (tags.length > 0) {
-                for (const t of tags) {
-                    await insertTag.run({ name: t })
-                    const tagRow = await getTag.get({ name: t })
-                    if (tagRow) {
-                        await linkImageTag.run({ imageId: image.id, tagId: tagRow.id })
-                        imageTags.push(tagRow)
+            // If the user decreased threads, this worker might need to stop
+            if (workerIndex >= currentTargetThreads) {
+                console.log(`[IPC] Worker ${workerIndex} stopping (threads reduced to ${currentTargetThreads})`)
+                break
+            }
+
+            const image = queue.shift()
+            if (!image) break
+
+            try {
+                const tags = await generateTags(image.filepath)
+                const imageTags: any[] = []
+
+                if (tags.length > 0) {
+                    for (const t of tags) {
+                        await insertTag.run({ name: t })
+                        const tagRow = await getTag.get({ name: t })
+                        if (tagRow) {
+                            await linkImageTag.run({ imageId: image.id, tagId: tagRow.id })
+                            imageTags.push(tagRow)
+                        }
                     }
+                }
+
+                await markImageProcessed.run({ id: image.id })
+                processedCount++
+
+                if (!win.isDestroyed()) {
+                    win.webContents.send('scan:progress', {
+                        total: totalToProcess,
+                        current: processedCount,
+                        image: image,
+                        tags: imageTags
+                    })
+                }
+            } catch (e) {
+                console.error(`Error processing ${image.filepath}`, e)
+            }
+            await new Promise(r => setTimeout(r, 10))
+        }
+        activeWorkers--
+    }
+
+    // Monitor for increases and initial start
+    const workersPromise = new Promise<void>(async (resolve) => {
+        while (true) {
+            if (win.isDestroyed() || (queue.length === 0 && activeWorkers === 0)) {
+                break
+            }
+
+            // Spawn more workers if target increased
+            if (activeWorkers < currentTargetThreads && queue.length > 0) {
+                const diff = currentTargetThreads - activeWorkers
+                for (let i = 0; i < diff; i++) {
+                    startWorker(activeWorkers)
                 }
             }
 
-            // Mark as processed only after successful tagging
-            // @ts-ignore
-            await markImageProcessed.run({ id: image.id })
-
-            processedCount++
-            if (!win.isDestroyed()) {
-                win.webContents.send('scan:progress', {
-                    total: totalToProcess,
-                    current: processedCount,
-                    image: image,
-                    tags: imageTags
-                })
-            }
-        } catch (e) {
-            console.error(`Error processing ${image.filepath}`, e)
+            await new Promise(r => setTimeout(r, 500))
         }
+        resolve()
+    })
 
-        // Small delay to prevent UI freezing
-        await new Promise(r => setTimeout(r, 10))
-    }
-
+    await workersPromise
     return { success: true, count: processedCount }
 }

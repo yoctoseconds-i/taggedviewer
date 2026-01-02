@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, createWriteStream, readFileSync, unlinkSync, sta
 import { get } from 'https'
 
 let onnx: any = null
-let Jimp: any = null
+let sharp: any = null
 let session: any = null
 let tags: string[] = []
 
@@ -55,20 +55,19 @@ async function downloadFile(urlStr: string, dest: string): Promise<void> {
 }
 
 async function loadEngine() {
-    if (onnx && Jimp) return
+    if (onnx && sharp) return
     try {
         // @ts-ignore
         onnx = require('onnxruntime-node')
         // @ts-ignore
-        const jimpPkg = require('jimp')
-        Jimp = jimpPkg.Jimp || jimpPkg
+        sharp = require('sharp')
     } catch (e) {
         // @ts-ignore
         const onnxMod = await import('onnxruntime-node')
         onnx = onnxMod.default || onnxMod
         // @ts-ignore
-        const jimpMod = await import('jimp')
-        Jimp = jimpMod.Jimp || jimpMod.default || jimpMod
+        const sharpMod = await import('sharp')
+        sharp = sharpMod.default || sharpMod
     }
 }
 
@@ -106,13 +105,23 @@ async function loadModel() {
 
     try {
         const options: any = {
-            executionProviders: ['cpu'],
+            executionProviders: [],
             logSeverityLevel: 3
         }
+
+        // On Windows, onnxruntime-node bundles DirectML for GPU acceleration.
+        // CUDA providers are usually not included in the standard Windows bin folder of the npm package.
+        if (process.platform === 'win32') {
+            options.executionProviders = ['dml', 'cpu']
+        } else {
+            options.executionProviders = ['cuda', 'cpu']
+        }
+
+        console.log(`[WD14] Using execution providers:`, options.executionProviders)
         session = await onnx.InferenceSession.create(paths.model, options)
         console.log('[WD14] InferenceSession created successfully.')
     } catch (err) {
-        console.error('[WD14] Failed to create InferenceSession. Likely corrupt model file.', err)
+        console.error('[WD14] Failed to create InferenceSession.', err)
         throw err
     }
     return session
@@ -121,29 +130,24 @@ async function loadModel() {
 export async function tagImageWD14(imagePath: string): Promise<string[]> {
     try {
         const sess = await loadModel()
-        const image = await Jimp.read(imagePath)
 
         const size = 448
-        // @ts-ignore
-        if (typeof image.resize === 'function') {
-            // Jimp v1.6.0 uses Zod for validation and requires an options object
-            image.resize({ w: size, h: size })
-        } else {
-            throw new Error('Jimp object missing resize method')
-        }
+        // Use Sharp for high-performance loading and resizing
+        const { data } = await sharp(imagePath)
+            .resize(size, size, { fit: 'fill' })
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true })
 
-        const p = image.bitmap.data
         const floatData = new Float32Array(1 * size * size * 3)
 
-        let i = 0
-        for (let y = 0; y < size; y++) {
-            for (let x = 0; x < size; x++) {
-                const idx = (y * size + x) * 4
-                // BGR Order
-                floatData[i++] = p[idx + 2] // B
-                floatData[i++] = p[idx + 1] // G
-                floatData[i++] = p[idx]     // R
-            }
+        // Transform RGBA to BGR float32
+        for (let i = 0; i < size * size; i++) {
+            const idx4 = i * 4
+            const idx3 = i * 3
+            floatData[idx3] = data[idx4 + 2]     // B
+            floatData[idx3 + 1] = data[idx4 + 1] // G
+            floatData[idx3 + 2] = data[idx4]     // R
         }
 
         const inputTensor = new onnx.Tensor('float32', floatData, [1, size, size, 3])

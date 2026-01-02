@@ -18,3 +18,7 @@ export interface ImageTag {
     tag_id: number
     score: number
 }
+
+export interface Settings {
+    threadCount: number
+}
