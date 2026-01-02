@@ -1,0 +1,10 @@
+node_modules
+out
+dist
+.electron-vite
+.vscode
+.DS_Store
+*.log
+test_models
+testimage
+db.json
