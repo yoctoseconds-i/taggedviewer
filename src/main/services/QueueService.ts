@@ -46,9 +46,9 @@ export async function processQueue(win: BrowserWindow) {
     const PROGRESS_THROTTLE_MS = 200 // Update UI at most 5 times per second
 
     const flushResults = async () => {
-      if (resultsBuffer.length === 0) return
       const batch = [...resultsBuffer]
-      resultsBuffer = []
+      resultsBuffer = [] // Clear first to avoid double processing during await
+      if (batch.length === 0) return
       await processImageResultsBulk.run(batch)
     }
 

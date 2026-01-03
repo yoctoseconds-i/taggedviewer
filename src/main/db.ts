@@ -167,11 +167,15 @@ export const insertTagsBulk = {
     try {
       const db = await getDb()
       let insertedCount = 0
-      for (const name of names) {
+      for (const rawName of names) {
+        const name = rawName.trim()
+        if (!name) continue
+
         const existing = db.data.tags.find((t: Tag) => t.name === name)
         if (!existing) {
+          const maxId = db.data.tags.reduce((max, t) => Math.max(max, t.id), 0)
           const newTag: Tag = {
-            id: Date.now() + Math.random(),
+            id: Math.max(maxId + 1, Date.now() + Math.random()),
             name: name,
             is_favorite: false,
           }
@@ -271,11 +275,15 @@ export const processImageResultsBulk = {
 
       for (const res of imageResults) {
         // 1. Ensure tags exist
-        for (const tagName of res.tagNames) {
+        for (const rawTagName of res.tagNames) {
+          const tagName = rawTagName.trim()
+          if (!tagName) continue
+
           let tag = db.data.tags.find((t) => t.name === tagName)
           if (!tag) {
+            const maxId = db.data.tags.reduce((max, t) => Math.max(max, t.id), 0)
             tag = {
-              id: Date.now() + Math.random(),
+              id: Math.max(maxId + 1, Date.now() + Math.random()),
               name: tagName,
               is_favorite: false,
             }
