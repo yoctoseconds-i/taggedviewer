@@ -1,0 +1,10 @@
+
+F:\codes\antigravity\taggedviewer\src\main\wd14.ts
+  51:18  error  Delete `ﾂｷ`  prettier/prettier
+  57:16  error  Delete `ﾂｷ`  prettier/prettier
+  91:14  error  Delete `ﾂｷ`  prettier/prettier
+  96:14  error  Delete `ﾂｷ`  prettier/prettier
+
+笨・4 problems (4 errors, 0 warnings)
+  4 errors and 0 warnings potentially fixable with the `--fix` option.
+

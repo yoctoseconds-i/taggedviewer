@@ -39,16 +39,18 @@ const defaultData: Data = {
   images: [],
   tags: [],
   image_tags: [],
-  settings: { threadCount: 2 }
+  settings: { threadCount: 2 },
 }
 const dbPath = join(app.getPath('userData'), 'taggedviewer-db.json')
 
-let dbPromise: Promise<any> | null = null;
+let dbPromise: Promise<any> | null = null
 class Lock {
   private promise: Promise<void> = Promise.resolve()
   async acquire() {
     let release: () => void
-    const next = new Promise<void>(resolve => { release = resolve })
+    const next = new Promise<void>((resolve) => {
+      release = resolve
+    })
     const current = this.promise
     this.promise = next
     await current
@@ -64,7 +66,7 @@ async function getDb() {
       // Migration: mark existing images without processed flag as processed
       // This ensures we don't re-scan existing legacy data
       let changed = false
-      db.data.images.forEach(img => {
+      db.data.images.forEach((img) => {
         if (img.processed === undefined) {
           img.processed = true
           changed = true
@@ -88,7 +90,7 @@ export const insertImage = {
           id: Date.now() + Math.random(),
           filepath: pt.filepath,
           scanned_at: new Date().toISOString(),
-          processed: false
+          processed: false,
         }
         db.data.images.push(newImage)
         await db.write()
@@ -98,7 +100,7 @@ export const insertImage = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const markImageProcessed = {
@@ -114,28 +116,30 @@ export const markImageProcessed = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const getUnprocessedImages = {
   get: async () => {
     const db = await getDb()
     return db.data.images.filter((i: Image) => !i.processed)
-  }
+  },
 }
 
 export const getImage = {
   get: async (pt: { filepath: string }) => {
     const db = await getDb()
     return db.data.images.find((i: Image) => i.filepath === pt.filepath)
-  }
+  },
 }
 
 export const getAllImages = {
   all: async () => {
     const db = await getDb()
-    return [...db.data.images].sort((a: Image, b: Image) => new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime())
-  }
+    return [...db.data.images].sort(
+      (a: Image, b: Image) => new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime()
+    )
+  },
 }
 
 export const insertTag = {
@@ -148,7 +152,7 @@ export const insertTag = {
         const newTag: Tag = {
           id: Date.now() + Math.random(),
           name: pt.name,
-          is_favorite: false
+          is_favorite: false,
         }
         db.data.tags.push(newTag)
         await db.write()
@@ -158,14 +162,14 @@ export const insertTag = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const getTag = {
   get: async (pt: { name: string }) => {
     const db = await getDb()
     return db.data.tags.find((t: Tag) => t.name === pt.name)
-  }
+  },
 }
 
 export const getAllTags = {
@@ -176,7 +180,7 @@ export const getAllTags = {
       return { ...tag, count }
     })
     return tags.sort((a: Tag, b: Tag) => a.name.localeCompare(b.name))
-  }
+  },
 }
 
 export const toggleFavoriteTag = {
@@ -189,15 +193,17 @@ export const toggleFavoriteTag = {
       return tag
     }
     return null
-  }
+  },
 }
 
 export const linkImageTag = {
-  run: async (pt: { imageId: number, tagId: number }) => {
+  run: async (pt: { imageId: number; tagId: number }) => {
     const release = await dbLock.acquire()
     try {
       const db = await getDb()
-      const exists = db.data.image_tags.some((it: ImageTag) => it.image_id === pt.imageId && it.tag_id === pt.tagId)
+      const exists = db.data.image_tags.some(
+        (it: ImageTag) => it.image_id === pt.imageId && it.tag_id === pt.tagId
+      )
       if (!exists) {
         db.data.image_tags.push({ image_id: pt.imageId, tag_id: pt.tagId, score: 1.0 })
         await db.write()
@@ -205,7 +211,7 @@ export const linkImageTag = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const getImagesByTag = {
@@ -214,22 +220,28 @@ export const getImagesByTag = {
     const tag = db.data.tags.find((t: Tag) => t.name === pt.tagName)
     if (!tag) return []
 
-    const imageIds = new Set(db.data.image_tags
-      .filter((it: ImageTag) => it.tag_id === tag.id)
-      .map((it: ImageTag) => it.image_id))
+    const imageIds = new Set(
+      db.data.image_tags
+        .filter((it: ImageTag) => it.tag_id === tag.id)
+        .map((it: ImageTag) => it.image_id)
+    )
 
     return db.data.images
       .filter((i: Image) => imageIds.has(i.id))
-      .sort((a: Image, b: Image) => new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime())
-  }
+      .sort(
+        (a: Image, b: Image) => new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime()
+      )
+  },
 }
 
 export const getTagsForImage = {
   get: async (pt: { imageId: number }) => {
     const db = await getDb()
-    const tagIds = new Set(db.data.image_tags
-      .filter((it: ImageTag) => it.image_id === pt.imageId)
-      .map((it: ImageTag) => it.tag_id))
+    const tagIds = new Set(
+      db.data.image_tags
+        .filter((it: ImageTag) => it.image_id === pt.imageId)
+        .map((it: ImageTag) => it.tag_id)
+    )
 
     const tags = db.data.tags
       .filter((t: Tag) => tagIds.has(t.id))
@@ -238,7 +250,7 @@ export const getTagsForImage = {
         return { ...tag, count }
       })
     return tags.sort((a: Tag, b: Tag) => a.name.localeCompare(b.name))
-  }
+  },
 }
 
 export const clearDatabase = {
@@ -253,7 +265,7 @@ export const clearDatabase = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const resetProcessed = {
@@ -261,12 +273,14 @@ export const resetProcessed = {
     const release = await dbLock.acquire()
     try {
       const db = await getDb()
-      db.data.images.forEach((img: Image) => { img.processed = false })
+      db.data.images.forEach((img: Image) => {
+        img.processed = false
+      })
       await db.write()
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const deleteImageByPath = {
@@ -288,7 +302,7 @@ export const deleteImageByPath = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export const getSettings = {
@@ -300,7 +314,7 @@ export const getSettings = {
       await db.write()
     }
     return db.data.settings
-  }
+  },
 }
 
 export const updateSettings = {
@@ -314,7 +328,7 @@ export const updateSettings = {
     } finally {
       release()
     }
-  }
+  },
 }
 
 export default getDb

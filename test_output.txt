@@ -1,0 +1,21 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mF:/codes/antigravity/taggedviewer[39m
+
+
+
+竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ Failed Suites 1 竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ
+
+ FAIL  src/renderer/src/components/SettingsModal/SettingsModal.test.tsx [ src/renderer/src/components/SettingsModal/SettingsModal.test.tsx ]
+Error: Cannot find module '@testing-library/dom'
+Require stack:
+- F:\codes\antigravity\taggedviewer\node_modules\@testing-library\react\dist\pure.js
+ 笶ｯ Object.<anonymous> node_modules/@testing-library/react/dist/pure.js:46:12
+
+竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ竡ｯ[1/1]竡ｯ
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [2mno tests[22m
+[2m   Start at [22m 12:21:56
+[2m   Duration [22m 1.68s[2m (transform 38ms, setup 182ms, import 0ms, tests 0ms, environment 1.24s)[22m
+

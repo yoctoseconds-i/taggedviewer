@@ -1,24 +1,24 @@
 export interface Image {
-    id: number
-    filepath: string
-    hash?: string
-    scanned_at: string
-    processed?: boolean
+  id: number
+  filepath: string
+  hash?: string
+  scanned_at: string
+  processed?: boolean
 }
 
 export interface Tag {
-    id: number
-    name: string
-    count?: number
-    is_favorite?: boolean
+  id: number
+  name: string
+  count?: number
+  is_favorite?: boolean
 }
 
 export interface ImageTag {
-    image_id: number
-    tag_id: number
-    score: number
+  image_id: number
+  tag_id: number
+  score: number
 }
 
 export interface Settings {
-    threadCount: number
+  threadCount: number
 }
