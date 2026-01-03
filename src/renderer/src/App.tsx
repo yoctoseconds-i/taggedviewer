@@ -109,6 +109,7 @@ function App(): JSX.Element {
         onOpenSettings={() => setShowSettings(true)}
         tagSearchTerm={tagSearchTerm}
         onSearchChange={setTagSearchTerm}
+        onToggleFavorite={toggleFavorite}
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-gray-950/50 relative">
