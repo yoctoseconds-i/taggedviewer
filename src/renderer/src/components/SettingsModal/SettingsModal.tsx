@@ -1,4 +1,11 @@
-import { X, Settings as SettingsIcon, Trash2, RefreshCw, AlertTriangle, Download } from 'lucide-react'
+import {
+  X,
+  Settings as SettingsIcon,
+  Trash2,
+  RefreshCw,
+  AlertTriangle,
+  Download,
+} from 'lucide-react'
 import { Settings } from '../../types'
 
 interface SettingsModalProps {

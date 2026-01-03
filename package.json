@@ -1,6 +1,6 @@
 {
   "name": "taggedviewer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "./out/main/index.js",
   "author": "Antigravity",
   "description": "Image Viewer with Local LLM Tagging",
@@ -26,6 +26,7 @@
     "onnxruntime-node": "^1.23.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-virtuoso": "^4.18.1",
     "sharp": "^0.34.5",
     "tailwind-merge": "^2.0.0"
   },

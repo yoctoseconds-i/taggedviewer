@@ -32,9 +32,9 @@ describe('QueueService', () => {
       { id: 1, filepath: 'test1.jpg' },
       { id: 2, filepath: 'test2.jpg' },
     ]
-      ; (db.getUnprocessedImages.get as any).mockResolvedValue(mockImages)
-      ; (db.getSettings.get as any).mockResolvedValue({ threadCount: 1 })
-      ; (tagger.generateTags as any).mockResolvedValue(['tag1', 'tag2'])
+    ;(db.getUnprocessedImages.get as any).mockResolvedValue(mockImages)
+    ;(db.getSettings.get as any).mockResolvedValue({ threadCount: 1 })
+    ;(tagger.generateTags as any).mockResolvedValue(['tag1', 'tag2'])
 
     const result = await processQueue(mockWin as BrowserWindow)
 
@@ -48,12 +48,12 @@ describe('QueueService', () => {
 
   it('should stop when thread count is reduced', async () => {
     const mockImages = Array.from({ length: 10 }, (_, i) => ({ id: i, filepath: `test${i}.jpg` }))
-      ; (db.getUnprocessedImages.get as any).mockResolvedValue(mockImages)
-      ; (db.getSettings.get as any).mockResolvedValue({ threadCount: 2 })
-      ; (tagger.generateTags as any).mockImplementation(async () => {
-        await new Promise((r) => setTimeout(r, 50))
-        return ['tag']
-      })
+    ;(db.getUnprocessedImages.get as any).mockResolvedValue(mockImages)
+    ;(db.getSettings.get as any).mockResolvedValue({ threadCount: 2 })
+    ;(tagger.generateTags as any).mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 50))
+      return ['tag']
+    })
 
     // Start processing
     const processingPromise = processQueue(mockWin as BrowserWindow)

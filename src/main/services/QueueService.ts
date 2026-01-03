@@ -1,10 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { generateTags } from '../tagger'
-import {
-  getUnprocessedImages,
-  getSettings,
-  processImageResultsBulk,
-} from '../db'
+import { getUnprocessedImages, getSettings, processImageResultsBulk } from '../db'
 
 let currentTargetThreads = 2
 let isProcessing = false
@@ -84,7 +80,7 @@ export async function processQueue(win: BrowserWindow) {
                 // Resulting tags might not be in DB yet, but for UI feedback it's usually okay
                 // or we can omit them and let UI refresh after batch.
                 // For simplicity, we send current image and its tags.
-                tags: tags.map(t => ({ name: t })),
+                tags: tags.map((t) => ({ name: t })),
               })
             }
           }
@@ -103,7 +99,11 @@ export async function processQueue(win: BrowserWindow) {
 
     const workersPromise = new Promise<void>(async (resolve) => {
       while (true) {
-        if (win.isDestroyed() || (queue.length === 0 && activeWorkers === 0) || currentTargetThreads === 0) {
+        if (
+          win.isDestroyed() ||
+          (queue.length === 0 && activeWorkers === 0) ||
+          currentTargetThreads === 0
+        ) {
           break
         }
 

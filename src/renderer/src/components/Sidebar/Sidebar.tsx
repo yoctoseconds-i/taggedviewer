@@ -30,10 +30,11 @@ export const Sidebar = ({
   const renderTag = (tag: Tag) => (
     <div
       key={tag.id}
-      className={`group w-full flex items-center rounded-lg text-xs font-medium transition-all border ${activeTag === tag.name
+      className={`group w-full flex items-center rounded-lg text-xs font-medium transition-all border ${
+        activeTag === tag.name
           ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
           : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200 border-transparent'
-        }`}
+      }`}
     >
       <button
         onClick={() => onTagClick(tag.name)}
@@ -42,10 +43,11 @@ export const Sidebar = ({
         <span className="truncate">{tag.name}</span>
         {tag.count !== undefined && (
           <span
-            className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-md font-mono shrink-0 ${activeTag === tag.name
+            className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-md font-mono shrink-0 ${
+              activeTag === tag.name
                 ? 'bg-indigo-500/20 text-indigo-300'
                 : 'bg-gray-900 text-gray-500 group-hover:bg-gray-800'
-              }`}
+            }`}
           >
             {tag.count}
           </span>
@@ -57,8 +59,9 @@ export const Sidebar = ({
           onToggleFavorite(tag.id)
         }}
         aria-label={tag.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-        className={`px-2 py-2 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 ${tag.is_favorite ? 'opacity-100 text-amber-400' : 'text-gray-600 hover:text-amber-400'
-          }`}
+        className={`px-2 py-2 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 ${
+          tag.is_favorite ? 'opacity-100 text-amber-400' : 'text-gray-600 hover:text-amber-400'
+        }`}
       >
         <Star className={`w-3.5 h-3.5 ${tag.is_favorite ? 'fill-amber-400' : ''}`} />
       </button>
@@ -106,10 +109,11 @@ export const Sidebar = ({
         <div>
           <button
             onClick={() => onTagClick(null)}
-            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between group ${activeTag === null
+            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between group ${
+              activeTag === null
                 ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
                 : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200 border border-transparent'
-              }`}
+            }`}
           >
             <span>All Images</span>
           </button>

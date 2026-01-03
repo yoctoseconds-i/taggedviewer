@@ -35,14 +35,14 @@ async function spawnWorker() {
 
   if (electron.utilityProcess) {
     worker = electron.utilityProcess.fork(scriptPath, args, {
-      stdio: 'inherit'
+      stdio: 'inherit',
     })
   } else {
     // Fallback for test environment where utilityProcess is not available
     console.log('[WD14 Manager] utilityProcess not available, falling back to child_process.fork')
     worker = fork(scriptPath, args, {
       stdio: 'inherit',
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     })
   }
 
@@ -98,10 +98,15 @@ function resetIdleTimer() {
   }, IDLE_TIMEOUT)
 }
 
-export async function tagImageWD14(imagePath: string, customUserDataPath?: string): Promise<string[]> {
+export async function tagImageWD14(
+  imagePath: string,
+  customUserDataPath?: string
+): Promise<string[]> {
   const w = await spawnWorker()
   const id = Math.random().toString(36).substring(7)
-  const userDataPath = customUserDataPath || (electron.app ? electron.app.getPath('userData') : join(process.cwd(), 'out', 'test-user-data'))
+  const userDataPath =
+    customUserDataPath ||
+    (electron.app ? electron.app.getPath('userData') : join(process.cwd(), 'out', 'test-user-data'))
 
   return new Promise((resolve, reject) => {
     pendingRequests.set(id, { resolve, reject })

@@ -27,5 +27,5 @@ nsis:
 
 asar: true
 asarUnpack:
-  - "**/node_modules/onnxruntime-node/bin/**"
-  - "**/node_modules/sharp/vendor/**"
+  - '**/node_modules/onnxruntime-node/bin/**'
+  - '**/node_modules/sharp/vendor/**'
