@@ -1,0 +1,79 @@
+
+> taggedviewer@1.0.0 dev
+> electron-vite dev
+
+[36mvite v5.4.21 [32mbuilding SSR bundle for development...[36m[39m
+transforming...
+[32m笨・[39m 171 modules transformed.
+rendering chunks...
+[2mout/main/[22m[36m_commonjs-dynamic-modules-DEvhXB2E.js  [39m[1m[2m  0.75 kB[22m[1m[22m
+[2mout/main/[22m[36mindex.js                               [39m[1m[2m 28.24 kB[22m[1m[22m
+[2mout/main/[22m[36mindex-D70nOo4u.js                      [39m[1m[2m 57.17 kB[22m[1m[22m
+[2mout/main/[22m[36mindex-DIYGukD5.js                      [39m[1m[2m195.77 kB[22m[1m[22m
+[32m笨・built in 1.07s[39m
+[32m
+build the electron main process successfully[39m
+[90m
+-----
+[39m
+[36mvite v5.4.21 [32mbuilding SSR bundle for development...[36m[39m
+transforming...
+[32m笨・[39m 2 modules transformed.
+rendering chunks...
+[2mout/preload/[22m[36mindex.js  [39m[1m[2m2.55 kB[22m[1m[22m
+[32m笨・built in 14ms[39m
+[32m
+build the electron preload files successfully[39m
+[90m
+-----
+[39m
+[32mdev server running for the electron renderer process at:
+[39m
+  [32m筐・[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m筐・[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[32m
+start electron app...
+[39m
+
+[QueueService] Found 0 unprocessed images. Initial Threads: 2
+[QueueService] Found 0 unprocessed images. Initial Threads: 2
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00222-1198964758.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00222-1198964758.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00222-1198964758.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00222-1198964758.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00163-1198964699.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00163-1198964699.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00163-1198964699.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00163-1198964699.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00136-2321432019.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00136-2321432019.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00136-2321432019.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00136-2321432019.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00108-1434836487.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00108-1434836487.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00108-1434836487.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00108-1434836487.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00104-714798344.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00104-714798344.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00104-714798344.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00104-714798344.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00104-276266918.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00104-276266918.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00104-276266918.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00104-276266918.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00103-1434836482.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00103-1434836482.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00103-1434836482.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00103-1434836482.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00102-714798342.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00102-714798342.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00102-714798342.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00102-714798342.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00099-2389552844.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00099-2389552844.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00099-2389552844.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00099-2389552844.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-680162654.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00098-680162654.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-680162654.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00098-680162654.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-2542915777.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00098-2542915777.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-2542915777.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00098-2542915777.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-2187160328.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00098-2187160328.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-2187160328.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00098-2187160328.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-1406874770.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00098-1406874770.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-1406874770.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00098-1406874770.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-1012215229.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00098-1012215229.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00098-1012215229.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00098-1012215229.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-2426660981.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00097-2426660981.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-2426660981.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00097-2426660981.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-1956383853.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00097-1956383853.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-1956383853.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00097-1956383853.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-1923762035.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00097-1923762035.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-1923762035.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00097-1923762035.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-1012215228.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00097-1012215228.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00097-1012215228.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00097-1012215228.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00096-2855762399.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00096-2855762399.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00096-2855762399.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00096-2855762399.png
+[Media] Protocol: media:, Host: e, Pathname: /x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00096-2187160326.png -> filePath: e:/x/mega/mine/diffusion/1_鮟定ｌ縺｡繧・ｓ/00096-2187160326.png
+[Media] Request: media://e/x/mega/mine/diffusion/1_%E9%BB%92%E8%82%8C%E3%81%A1%E3%82%83%E3%82%93/00096-2187160326.png -> Normalized: e:\x\mega\mine\diffusion\1_鮟定ｌ縺｡繧・ｓ\00096-2187160326.png

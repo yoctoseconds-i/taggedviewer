@@ -30,7 +30,7 @@ export const ImageGrid = ({ images, onImageClick }: ImageGridProps) => {
           className="aspect-square relative group bg-gray-900 rounded-xl overflow-hidden cursor-pointer border border-gray-800 hover:border-indigo-500/50 shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 active:scale-95"
         >
           <img
-            src={`media:///${img.filepath}`}
+            src={`media://${encodeURI(img.filepath.replace(/\\/g, '/'))}`}
             alt=""
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"

@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, protocol, net } from 'electron'
-import { join } from 'path'
+import { join, normalize } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIPC } from './ipc'
 import { pathToFileURL } from 'url'
@@ -52,33 +52,34 @@ app.whenReady().then(() => {
   // Register 'media' protocol to handle local file access
   protocol.handle('media', async (request) => {
     try {
-      const urlObj = new URL(request.url)
-      // urlObj.pathname will be like "/E:/path/to/file.png"
-      let decodePath = decodeURIComponent(urlObj.pathname)
+      const url = new URL(request.url)
+      let p = decodeURIComponent(url.pathname)
+      let host = decodeURIComponent(url.host)
 
-      // Remove leading slash for Windows drive paths (e.g. /C:/... -> C:/...)
-      if (process.platform === 'win32' && /^\/[a-zA-Z]:/.test(decodePath)) {
-        decodePath = decodePath.slice(1)
+      let filePath = ''
+      if (host && /^[a-zA-Z]:?$/.test(host)) {
+        filePath = host + (host.includes(':') ? '' : ':') + (p.startsWith('/') ? '' : '/') + p
+      } else {
+        filePath = p
       }
 
-      // Lazy Cleanup Check
-      if (!existsSync(decodePath)) {
-        if (is.dev) console.log(`[Media] File missing: ${decodePath}. Cleaning up...`)
-        const result = await deleteImageByPath.run({ filepath: decodePath })
-        if (result.success) {
-          // Notify renderer to remove from UI
-          const windows = BrowserWindow.getAllWindows()
-          if (windows.length > 0) {
-            windows[0].webContents.send('image:deleted', result.id)
-          }
+      // On Windows, fix common path issues
+      if (process.platform === 'win32') {
+        if (filePath.startsWith('/') && !filePath.startsWith('//')) {
+          filePath = filePath.slice(1)
         }
+        filePath = normalize(filePath)
+      }
+
+      // Normalize Unicode
+      filePath = filePath.normalize('NFC')
+
+      if (!existsSync(filePath)) {
+        if (is.dev) console.warn(`[Media] File not found: ${filePath}`)
         return new Response('File not found', { status: 404 })
       }
 
-      if (is.dev) console.log(`[Media] Serving: ${decodePath}`)
-
-      const fileUrl = pathToFileURL(decodePath).toString()
-      return net.fetch(fileUrl)
+      return net.fetch(pathToFileURL(filePath).toString())
     } catch (e) {
       console.error('Media protocol error:', request.url, e)
       return new Response('Error loading media', { status: 400 })

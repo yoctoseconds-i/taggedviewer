@@ -25,7 +25,7 @@ export const ImageViewer = ({
     >
       <div className="flex-1 flex items-center justify-center p-8 relative">
         <img
-          src={`media:///${image.filepath}`}
+          src={`media://${encodeURI(image.filepath.replace(/\\/g, '/'))}`}
           className="max-h-full max-w-full object-contain shadow-2xl rounded-lg animate-in zoom-in-95 duration-500"
           alt=""
           onClick={(e) => e.stopPropagation()}
@@ -76,14 +76,12 @@ export const ImageViewer = ({
                     e.stopPropagation()
                     onToggleFavorite(tag.id)
                   }}
-                  className={`p-1 rounded-full transition-colors ${
-                    tag.is_favorite ? 'bg-amber-400/20' : 'hover:bg-white/10'
-                  }`}
+                  className={`p-1 rounded-full transition-colors ${tag.is_favorite ? 'bg-amber-400/20' : 'hover:bg-white/10'
+                    }`}
                 >
                   <Star
-                    className={`w-3 h-3 ${
-                      tag.is_favorite ? 'text-amber-400 fill-amber-400' : 'text-gray-600'
-                    }`}
+                    className={`w-3 h-3 ${tag.is_favorite ? 'text-amber-400 fill-amber-400' : 'text-gray-600'
+                      }`}
                   />
                 </div>
               </button>
