@@ -9,11 +9,17 @@ import {
   markImageProcessed,
 } from '../db'
 
+let queue: any[] = []
 let currentTargetThreads = 2
 let isProcessing = false
 
 export const setTargetThreads = (count: number) => {
   currentTargetThreads = count
+}
+
+export const stopQueue = () => {
+  currentTargetThreads = 0
+  queue = []
 }
 
 export const getProcessingStatus = () => isProcessing
