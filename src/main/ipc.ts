@@ -3,7 +3,7 @@ import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
 import { scanDirectory } from './scanner'
 import {
-  insertImage,
+  insertImagesBulk,
   getAllImages,
   getAllTags,
   getImagesByTag,
@@ -35,15 +35,16 @@ export function setupIPC(mainWindow: BrowserWindow) {
     console.log(`Starting scan for ${dirPath}`)
     const files = scanDirectory(dirPath)
 
-    // Phase 1: Registration
-    let registered = 0
-    for (const file of files) {
+    // Phase 1: Registration (Bulk)
+    const BATCH_SIZE = 100
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
       if (mainWindow.isDestroyed()) return { success: false, count: 0 }
-      await insertImage.run({ filepath: file })
-      registered++
-      if (registered % 50 === 0) {
-        mainWindow.webContents.send('scan:progress', { total: files.length, current: registered })
-      }
+      const batch = files.slice(i, i + BATCH_SIZE)
+      await insertImagesBulk.run(batch)
+      mainWindow.webContents.send('scan:progress', {
+        total: files.length,
+        current: Math.min(i + batch.length, files.length),
+      })
     }
 
     // Phase 2: Processing Queue

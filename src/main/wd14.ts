@@ -1,183 +1,116 @@
-import { app } from 'electron'
+import * as electron from 'electron'
 import { join } from 'path'
-import { existsSync, mkdirSync, createWriteStream, readFileSync, unlinkSync, statSync } from 'fs'
-import { get } from 'https'
+import { fork } from 'child_process'
 
-let onnx: any = null
-let sharp: any = null
-let session: any = null
-let tags: string[] = []
+let worker: any = null
+let idleTimer: NodeJS.Timeout | null = null
+const IDLE_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
-function getModelPaths() {
-  const dir = join(app.getPath('userData'), 'models')
-  return {
-    dir,
-    model: join(dir, 'wd-v1-4-convnext-tagger-v2.onnx'),
-    tags: join(dir, 'selected_tags.csv'),
-  }
+let readyResolve: ((value: any) => void) | null = null
+let readyPromise: Promise<any> | null = null
+let isInitializing = false
+
+interface Request {
+  resolve: (value: string[]) => void
+  reject: (reason?: any) => void
 }
+const pendingRequests = new Map<string, Request>()
 
-const MODEL_URL =
-  'https://huggingface.co/SmilingWolf/wd-v1-4-convnext-tagger-v2/resolve/main/model.onnx'
-const TAGS_URL =
-  'https://huggingface.co/SmilingWolf/wd-v1-4-convnext-tagger-v2/resolve/main/selected_tags.csv'
+async function spawnWorker() {
+  if (worker && readyPromise) return readyPromise
+  if (isInitializing) return readyPromise
 
-/**
- * Downloads a file, supporting recursive HTTP redirects and resolving relative URLs.
- */
-async function downloadFile(urlStr: string, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    get(urlStr, (response) => {
-      // Handle Redirects (301, 302, 307, 308)
-      if ([301, 302, 307, 308].includes(response.statusCode || 0) && response.headers.location) {
-        const targetUrl = new URL(response.headers.location, urlStr).toString()
-        return downloadFile(targetUrl, dest).then(resolve).catch(reject)
-      }
-
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download ${urlStr}: ${response.statusCode}`))
-        return
-      }
-
-      const file = createWriteStream(dest)
-      response.pipe(file)
-      file.on('finish', () => {
-        file.close()
-        resolve()
-      })
-      file.on('error', (err) => {
-        try {
-          unlinkSync(dest)
-        } catch {}
-        reject(err)
-      })
-    }).on('error', (err) => {
-      try {
-        unlinkSync(dest)
-      } catch {}
-      reject(err)
-    })
+  isInitializing = true
+  readyPromise = new Promise((resolve) => {
+    readyResolve = resolve
   })
-}
 
-async function loadEngine() {
-  if (onnx && sharp) return
-  try {
-    // @ts-ignore
-    onnx = require('onnxruntime-node')
-    // @ts-ignore
-    sharp = require('sharp')
-  } catch {
-    // @ts-ignore
-    const onnxMod = await import('onnxruntime-node')
-    onnx = onnxMod.default || onnxMod
-    // @ts-ignore
-    const sharpMod = await import('sharp')
-    sharp = sharpMod.default || sharpMod
-  }
-}
+  const scriptPath = electron.app?.isPackaged
+    ? join(__dirname, 'index.js')
+    : join(process.cwd(), 'out', 'main', 'index.js')
 
-async function loadModel() {
-  await loadEngine()
-  if (session) return session
+  console.log(`[WD14 Manager] Spawning self as worker: ${scriptPath}`)
 
-  const paths = getModelPaths()
-  if (!existsSync(paths.dir)) mkdirSync(paths.dir, { recursive: true })
+  const args = ['--worker-mode']
 
-  // Check for corrupt/incomplete files (Model is ~80MB, Tags are ~300KB)
-  if (existsSync(paths.model) && statSync(paths.model).size < 200 * 1024) {
-    try {
-      unlinkSync(paths.model)
-    } catch {}
-  }
-  if (existsSync(paths.tags) && statSync(paths.tags).size < 10 * 1024) {
-    try {
-      unlinkSync(paths.tags)
-    } catch {}
-  }
-
-  if (!existsSync(paths.model)) {
-    console.log(`[WD14] Downloading model...`)
-    await downloadFile(MODEL_URL, paths.model)
-  }
-  if (!existsSync(paths.tags)) {
-    console.log(`[WD14] Downloading tags...`)
-    await downloadFile(TAGS_URL, paths.tags)
-  }
-
-  const csv = readFileSync(paths.tags, 'utf-8')
-  const lines = csv.split('\n')
-  tags = lines
-    .map((line) => {
-      const parts = line.split(',')
-      if (parts.length < 2) return null
-      return parts[1]
+  if (electron.utilityProcess) {
+    worker = electron.utilityProcess.fork(scriptPath, args, {
+      stdio: 'inherit'
     })
-    .filter((t): t is string => !!t && t !== 'name')
-
-  try {
-    const options: any = {
-      executionProviders: [],
-      logSeverityLevel: 3,
-    }
-
-    // On Windows, onnxruntime-node bundles DirectML for GPU acceleration.
-    // CUDA providers are usually not included in the standard Windows bin folder of the npm package.
-    if (process.platform === 'win32') {
-      options.executionProviders = ['dml', 'cpu']
-    } else {
-      options.executionProviders = ['cuda', 'cpu']
-    }
-
-    console.log(`[WD14] Using execution providers:`, options.executionProviders)
-    session = await onnx.InferenceSession.create(paths.model, options)
-    console.log('[WD14] InferenceSession created successfully.')
-  } catch (err) {
-    console.error('[WD14] Failed to create InferenceSession.', err)
-    throw err
+  } else {
+    // Fallback for test environment where utilityProcess is not available
+    console.log('[WD14 Manager] utilityProcess not available, falling back to child_process.fork')
+    worker = fork(scriptPath, args, {
+      stdio: 'inherit',
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+    })
   }
-  return session
+
+  const onMessage = (message: any) => {
+    const { type, payload, id } = message
+    if (type === 'TAG_IMAGE_RESULT') {
+      const req = pendingRequests.get(id)
+      if (req) {
+        console.log(`[WD14 Manager] Received result for id: ${id} (${payload.length} tags)`)
+        req.resolve(payload)
+        pendingRequests.delete(id)
+      }
+    } else if (type === 'READY') {
+      console.log('[WD14 Manager] Worker is READY')
+      isInitializing = false
+      if (readyResolve) readyResolve(worker)
+    }
+    resetIdleTimer()
+  }
+
+  if (worker.on) {
+    worker.on('message', onMessage)
+    worker.on('error', (err: any) => {
+      console.error('[WD14 Manager] Worker error:', err)
+    })
+    worker.on('exit', (code: number) => {
+      console.log(`[WD14 Manager] Worker exited with code: ${code}`)
+      worker = null
+      readyPromise = null
+      isInitializing = false
+      pendingRequests.forEach((req) => req.reject(new Error(`Worker exited with code ${code}`)))
+      pendingRequests.clear()
+    })
+  }
+
+  return readyPromise
 }
 
-export async function tagImageWD14(imagePath: string): Promise<string[]> {
-  try {
-    const sess = await loadModel()
+function sendMessage(w: any, message: any) {
+  if (w.postMessage) w.postMessage(message)
+  else if (w.send) w.send(message)
+}
 
-    const size = 448
-    // Use Sharp for high-performance loading and resizing
-    const { data } = await sharp(imagePath)
-      .resize(size, size, { fit: 'fill' })
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-
-    const floatData = new Float32Array(1 * size * size * 3)
-
-    // Transform RGBA to BGR float32
-    for (let i = 0; i < size * size; i++) {
-      const idx4 = i * 4
-      const idx3 = i * 3
-      floatData[idx3] = data[idx4 + 2] // B
-      floatData[idx3 + 1] = data[idx4 + 1] // G
-      floatData[idx3 + 2] = data[idx4] // R
+function resetIdleTimer() {
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    if (worker && pendingRequests.size === 0) {
+      console.log('[WD14 Manager] Worker idle for 5 mins, terminating...')
+      worker.kill()
+      worker = null
+      readyPromise = null
     }
+  }, IDLE_TIMEOUT)
+}
 
-    const inputTensor = new onnx.Tensor('float32', floatData, [1, size, size, 3])
-    const feeds = { [sess.inputNames[0]]: inputTensor }
-    const results = await sess.run(feeds)
-    const output = results[sess.outputNames[0]].data as Float32Array
+export async function tagImageWD14(imagePath: string, customUserDataPath?: string): Promise<string[]> {
+  const w = await spawnWorker()
+  const id = Math.random().toString(36).substring(7)
+  const userDataPath = customUserDataPath || (electron.app ? electron.app.getPath('userData') : join(process.cwd(), 'out', 'test-user-data'))
 
-    const threshold = 0.35
-    const finalTags: string[] = []
-    for (let j = 0; j < output.length; j++) {
-      if (output[j] > threshold && tags[j]) {
-        finalTags.push(tags[j])
-      }
-    }
-
-    return finalTags
-  } catch (_e) {
-    console.error('[WD14] Inference Error:', _e)
-    return []
-  }
+  return new Promise((resolve, reject) => {
+    pendingRequests.set(id, { resolve, reject })
+    console.log(`[WD14 Manager] Sending TAG_IMAGE for: ${imagePath} (id: ${id})`)
+    sendMessage(w, {
+      type: 'TAG_IMAGE',
+      payload: { imagePath, userDataPath },
+      id,
+    })
+    resetIdleTimer()
+  })
 }

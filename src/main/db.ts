@@ -79,27 +79,46 @@ async function getDb() {
   return dbPromise
 }
 
-export const insertImage = {
-  run: async (pt: { filepath: string }) => {
+export const insertImagesBulk = {
+  run: async (filepaths: string[]) => {
     const release = await dbLock.acquire()
     try {
       const db = await getDb()
-      const existing = db.data.images.find((i: Image) => i.filepath === pt.filepath)
-      if (!existing) {
-        const newImage: Image = {
-          id: Date.now() + Math.random(),
-          filepath: pt.filepath,
-          scanned_at: new Date().toISOString(),
-          processed: false,
+      let insertedCount = 0
+      const results: { id: number; filepath: string; inserted: boolean }[] = []
+
+      for (const filepath of filepaths) {
+        const existing = db.data.images.find((i: Image) => i.filepath === filepath)
+        if (!existing) {
+          const newImage: Image = {
+            id: Date.now() + Math.random(),
+            filepath: filepath,
+            scanned_at: new Date().toISOString(),
+            processed: false,
+          }
+          db.data.images.push(newImage)
+          results.push({ id: newImage.id, filepath, inserted: true })
+          insertedCount++
+        } else {
+          results.push({ id: existing.id, filepath, inserted: false })
         }
-        db.data.images.push(newImage)
-        await db.write()
-        return { lastInsertRowid: newImage.id, inserted: true }
       }
-      return { lastInsertRowid: existing.id, inserted: false }
+
+      if (insertedCount > 0) {
+        await db.write()
+      }
+      return results
     } finally {
       release()
     }
+  },
+}
+
+export const insertImage = {
+  run: async (pt: { filepath: string }) => {
+    const results = await insertImagesBulk.run([pt.filepath])
+    const res = results[0]
+    return { lastInsertRowid: res.id, inserted: res.inserted }
   },
 }
 
@@ -142,26 +161,43 @@ export const getAllImages = {
   },
 }
 
-export const insertTag = {
-  run: async (pt: { name: string }) => {
+export const insertTagsBulk = {
+  run: async (names: string[]) => {
     const release = await dbLock.acquire()
     try {
       const db = await getDb()
-      const existing = db.data.tags.find((t: Tag) => t.name === pt.name)
-      if (!existing) {
-        const newTag: Tag = {
-          id: Date.now() + Math.random(),
-          name: pt.name,
-          is_favorite: false,
+      let insertedCount = 0
+      for (const name of names) {
+        const existing = db.data.tags.find((t: Tag) => t.name === name)
+        if (!existing) {
+          const newTag: Tag = {
+            id: Date.now() + Math.random(),
+            name: name,
+            is_favorite: false,
+          }
+          db.data.tags.push(newTag)
+          insertedCount++
         }
-        db.data.tags.push(newTag)
-        await db.write()
-        return { lastInsertRowid: newTag.id }
       }
-      return { lastInsertRowid: existing.id }
+      if (insertedCount > 0) {
+        await db.write()
+      }
     } finally {
       release()
     }
+  },
+}
+
+export const insertTag = {
+  run: async (pt: { name: string }) => {
+    await insertTagsBulk.run([pt.name])
+    // The previous implementation returned lastInsertRowid.
+    // However, the caller usually refetches it or we can optimize it later.
+    // For compatibility with QueueService, let's keep the return if possible,
+    // but insertTag in QueueService is inside a loop, which is exactly what we want to bulk.
+    const db = await getDb()
+    const tag = db.data.tags.find((t: Tag) => t.name === pt.name)
+    return { lastInsertRowid: tag?.id }
   },
 }
 
@@ -196,16 +232,76 @@ export const toggleFavoriteTag = {
   },
 }
 
-export const linkImageTag = {
-  run: async (pt: { imageId: number; tagId: number }) => {
+export const linkImageTagsBulk = {
+  run: async (links: { imageId: number; tagId: number }[]) => {
     const release = await dbLock.acquire()
     try {
       const db = await getDb()
-      const exists = db.data.image_tags.some(
-        (it: ImageTag) => it.image_id === pt.imageId && it.tag_id === pt.tagId
-      )
-      if (!exists) {
-        db.data.image_tags.push({ image_id: pt.imageId, tag_id: pt.tagId, score: 1.0 })
+      let insertedCount = 0
+      for (const link of links) {
+        const exists = db.data.image_tags.some(
+          (it: ImageTag) => it.image_id === link.imageId && it.tag_id === link.tagId
+        )
+        if (!exists) {
+          db.data.image_tags.push({ image_id: link.imageId, tag_id: link.tagId, score: 1.0 })
+          insertedCount++
+        }
+      }
+      if (insertedCount > 0) {
+        await db.write()
+      }
+    } finally {
+      release()
+    }
+  },
+}
+
+export const linkImageTag = {
+  run: async (pt: { imageId: number; tagId: number }) => {
+    await linkImageTagsBulk.run([pt])
+  },
+}
+
+export const processImageResultsBulk = {
+  run: async (imageResults: { imageId: number; tagNames: string[] }[]) => {
+    const release = await dbLock.acquire()
+    try {
+      const db = await getDb()
+      let changed = false
+
+      for (const res of imageResults) {
+        // 1. Ensure tags exist
+        for (const tagName of res.tagNames) {
+          let tag = db.data.tags.find((t) => t.name === tagName)
+          if (!tag) {
+            tag = {
+              id: Date.now() + Math.random(),
+              name: tagName,
+              is_favorite: false,
+            }
+            db.data.tags.push(tag)
+            changed = true
+          }
+
+          // 2. Link image to tag
+          const alreadyLinked = db.data.image_tags.some(
+            (it) => it.image_id === res.imageId && it.tag_id === tag!.id
+          )
+          if (!alreadyLinked) {
+            db.data.image_tags.push({ image_id: res.imageId, tag_id: tag!.id, score: 1.0 })
+            changed = true
+          }
+        }
+
+        // 3. Mark image as processed
+        const img = db.data.images.find((i) => i.id === res.imageId)
+        if (img && !img.processed) {
+          img.processed = true
+          changed = true
+        }
+      }
+
+      if (changed) {
         await db.write()
       }
     } finally {

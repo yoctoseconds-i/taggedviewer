@@ -3,13 +3,9 @@ import { generateTags } from '../tagger'
 import {
   getUnprocessedImages,
   getSettings,
-  insertTag,
-  getTag,
-  linkImageTag,
-  markImageProcessed,
+  processImageResultsBulk,
 } from '../db'
 
-let queue: any[] = []
 let currentTargetThreads = 2
 let isProcessing = false
 
@@ -19,7 +15,6 @@ export const setTargetThreads = (count: number) => {
 
 export const stopQueue = () => {
   currentTargetThreads = 0
-  queue = []
 }
 
 export const getProcessingStatus = () => isProcessing
@@ -49,49 +44,54 @@ export async function processQueue(win: BrowserWindow) {
       win.webContents.send('scan:progress', { total: totalToProcess, current: 0 })
     }
 
+    // Results buffering
+    let resultsBuffer: { imageId: number; tagNames: string[] }[] = []
+    let lastProgressUpdate = 0
+    const PROGRESS_THROTTLE_MS = 200 // Update UI at most 5 times per second
+
+    const flushResults = async () => {
+      if (resultsBuffer.length === 0) return
+      const batch = [...resultsBuffer]
+      resultsBuffer = []
+      await processImageResultsBulk.run(batch)
+    }
+
     const startWorker = async (workerIndex: number) => {
       activeWorkers++
-      console.log(`[QueueService] Worker ${workerIndex} started. Total active: ${activeWorkers}`)
+      console.log(`[QueueService] Worker ${workerIndex} started.`)
 
       while (queue.length > 0) {
-        if (win.isDestroyed()) break
-
-        // If the user decreased threads, this worker might need to stop
-        if (workerIndex >= currentTargetThreads) {
-          console.log(
-            `[QueueService] Worker ${workerIndex} stopping (threads reduced to ${currentTargetThreads})`
-          )
-          break
-        }
+        if (win.isDestroyed() || currentTargetThreads === 0) break
+        if (workerIndex >= currentTargetThreads) break
 
         const image = queue.shift()
         if (!image) break
 
         try {
           const tags = await generateTags(image.filepath)
-          const imageTags: any[] = []
+          resultsBuffer.push({ imageId: image.id, tagNames: tags })
+          processedCount++
 
-          if (tags.length > 0) {
-            for (const t of tags) {
-              await insertTag.run({ name: t })
-              const tagRow = await getTag.get({ name: t })
-              if (tagRow) {
-                await linkImageTag.run({ imageId: image.id, tagId: tagRow.id })
-                imageTags.push(tagRow)
-              }
+          // Throttled notification
+          const now = Date.now()
+          if (now - lastProgressUpdate > PROGRESS_THROTTLE_MS || queue.length === 0) {
+            lastProgressUpdate = now
+            if (!win.isDestroyed()) {
+              win.webContents.send('scan:progress', {
+                total: totalToProcess,
+                current: processedCount,
+                image: image,
+                // Resulting tags might not be in DB yet, but for UI feedback it's usually okay
+                // or we can omit them and let UI refresh after batch.
+                // For simplicity, we send current image and its tags.
+                tags: tags.map(t => ({ name: t })),
+              })
             }
           }
 
-          await markImageProcessed.run({ id: image.id })
-          processedCount++
-
-          if (!win.isDestroyed()) {
-            win.webContents.send('scan:progress', {
-              total: totalToProcess,
-              current: processedCount,
-              image: image,
-              tags: imageTags,
-            })
+          // Periodic flush
+          if (resultsBuffer.length >= 10) {
+            await flushResults()
           }
         } catch (e) {
           console.error(`Error processing ${image.filepath}`, e)
@@ -101,19 +101,12 @@ export async function processQueue(win: BrowserWindow) {
       activeWorkers--
     }
 
-    // Monitor for increases and initial start
     const workersPromise = new Promise<void>(async (resolve) => {
       while (true) {
-        if (win.isDestroyed() || (queue.length === 0 && activeWorkers === 0)) {
+        if (win.isDestroyed() || (queue.length === 0 && activeWorkers === 0) || currentTargetThreads === 0) {
           break
         }
 
-        // If threads reduced to 0, stop the entire process
-        if (currentTargetThreads === 0 && activeWorkers === 0) {
-          break
-        }
-
-        // Spawn more workers if target increased
         if (activeWorkers < currentTargetThreads && queue.length > 0) {
           const diff = currentTargetThreads - activeWorkers
           for (let i = 0; i < diff; i++) {
@@ -121,8 +114,14 @@ export async function processQueue(win: BrowserWindow) {
           }
         }
 
+        // Final flush if close to end
+        if (resultsBuffer.length > 0) {
+          await flushResults()
+        }
+
         await new Promise((r) => setTimeout(r, 500))
       }
+      await flushResults() // Last one
       resolve()
     })
 

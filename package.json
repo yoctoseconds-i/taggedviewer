@@ -1,13 +1,13 @@
 {
   "name": "taggedviewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "./out/main/index.js",
   "author": "Antigravity",
   "description": "Image Viewer with Local LLM Tagging",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "preview": "electron-vite preview",
+    "dist": "npm run build && electron-builder --win --publish never",
     "postinstall": "electron-builder install-app-deps",
     "test": "vitest run",
     "test:watch": "vitest",

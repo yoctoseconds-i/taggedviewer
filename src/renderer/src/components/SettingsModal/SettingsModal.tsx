@@ -32,7 +32,7 @@ export const SettingsModal = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-md max-h-[90vh] bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
@@ -48,7 +48,7 @@ export const SettingsModal = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
           <div className="space-y-3">
             <label className="text-sm font-semibold text-gray-300 flex items-center justify-between">
               Analysis Threads
