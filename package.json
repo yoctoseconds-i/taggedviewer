@@ -1,6 +1,6 @@
 {
   "name": "taggedviewer",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "./out/main/index.js",
   "author": "Antigravity",
   "description": "Image Viewer with Local LLM Tagging",
