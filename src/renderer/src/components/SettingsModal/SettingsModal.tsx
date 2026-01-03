@@ -1,4 +1,4 @@
-import { X, Settings as SettingsIcon, Trash2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { X, Settings as SettingsIcon, Trash2, RefreshCw, AlertTriangle, Download } from 'lucide-react'
 import { Settings } from '../../types'
 
 interface SettingsModalProps {
@@ -8,6 +8,9 @@ interface SettingsModalProps {
   onUpdateThreadCount: (count: number) => void
   onRescan: () => void
   onClear: () => void
+  version?: string
+  updateStatus?: { available: boolean; info?: any; checking: boolean }
+  onCheckForUpdates?: () => void
 }
 
 export const SettingsModal = ({
@@ -17,6 +20,9 @@ export const SettingsModal = ({
   onUpdateThreadCount,
   onRescan,
   onClear,
+  version,
+  updateStatus,
+  onCheckForUpdates,
 }: SettingsModalProps) => {
   if (!show) return null
 
@@ -105,6 +111,63 @@ export const SettingsModal = ({
                 <Trash2 className="w-4 h-4" />
                 Clear All Library Data
               </button>
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-800" />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-300">App Information</label>
+              {version && <span className="text-[10px] text-gray-500 font-mono">v{version}</span>}
+            </div>
+
+            <div className="bg-gray-950/50 rounded-xl border border-gray-800 overflow-hidden">
+              <div className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-300 font-medium">Software Updates</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    Check for latest versions on GitHub.
+                  </p>
+                </div>
+                <button
+                  onClick={onCheckForUpdates}
+                  disabled={updateStatus?.checking}
+                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 text-xs font-bold rounded-lg border border-gray-700 transition-all active:scale-95"
+                >
+                  {updateStatus?.checking ? (
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                  ) : (
+                    'Check Updates'
+                  )}
+                </button>
+              </div>
+
+              {updateStatus?.available && (
+                <div className="px-4 py-3 bg-indigo-500/10 border-t border-indigo-500/20 flex items-center gap-3">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <Download className="w-4 h-4 text-indigo-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-indigo-300 font-bold">
+                      New Version Available: v{updateStatus.info?.version}
+                    </p>
+                    <p className="text-[9px] text-indigo-400/70 truncate">
+                      Go to GitHub to download the latest installer.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      window.electron.shell.openExternal(
+                        'https://github.com/rshkkngtm08/taggedviewer/releases'
+                      )
+                    }
+                    className="px-3 py-1 bg-indigo-500 hover:bg-indigo-400 text-white text-[10px] font-bold rounded-md shadow-lg shadow-indigo-500/20 transition-all active:scale-95 whitespace-nowrap"
+                  >
+                    Get Update
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

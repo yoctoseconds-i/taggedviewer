@@ -1,0 +1,31 @@
+appId: com.antigravity.taggedviewer
+productName: TaggedViewer
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - node_modules/**/*
+  - package.json
+
+publish:
+  provider: github
+  owner: rshkkngtm08
+  repo: taggedviewer
+
+win:
+  target:
+    - nsis
+  icon: build/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: TaggedViewer
+
+asar: true
+asarUnpack:
+  - "**/node_modules/onnxruntime-node/bin/**"
+  - "**/node_modules/sharp/vendor/**"

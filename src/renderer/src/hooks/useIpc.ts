@@ -4,6 +4,15 @@ import { Image, Tag } from '../types'
 export const useIpc = (loadData: () => void) => {
   const [isScanning, setIsScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 })
+  const [version, setVersion] = useState<string>('')
+  const [updateStatus, setUpdateStatus] = useState<{
+    available: boolean
+    info?: any
+    checking: boolean
+  }>({
+    available: false,
+    checking: false,
+  })
 
   useEffect(() => {
     // @ts-ignore
@@ -19,11 +28,38 @@ export const useIpc = (loadData: () => void) => {
       }
     )
 
+    // @ts-ignore
+    window.electron.ipcRenderer.on('app:update-available', (_, info) => {
+      setUpdateStatus({ available: true, info, checking: false })
+    })
+
+    // @ts-ignore
+    window.electron.ipcRenderer.on('app:update-not-available', () => {
+      setUpdateStatus({ available: false, checking: false })
+    })
+
+    const fetchVersion = async () => {
+      // @ts-ignore
+      const v = await window.electron.ipcRenderer.invoke('app:getVersion')
+      setVersion(v)
+    }
+    fetchVersion()
+
     return () => {
       // @ts-ignore
       window.electron.ipcRenderer.removeAllListeners('scan:progress')
+      // @ts-ignore
+      window.electron.ipcRenderer.removeAllListeners('app:update-available')
+      // @ts-ignore
+      window.electron.ipcRenderer.removeAllListeners('app:update-not-available')
     }
   }, [loadData])
+
+  const checkForUpdates = async () => {
+    setUpdateStatus((s) => ({ ...s, checking: true }))
+    // @ts-ignore
+    await window.electron.ipcRenderer.invoke('app:checkForUpdates')
+  }
 
   const openFolder = async () => {
     // @ts-ignore
@@ -76,5 +112,8 @@ export const useIpc = (loadData: () => void) => {
     showItemInFolder,
     clearLibrary,
     rescanLibrary,
+    version,
+    updateStatus,
+    checkForUpdates,
   }
 }

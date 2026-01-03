@@ -5,6 +5,10 @@ import { setupIPC } from './ipc'
 import { pathToFileURL } from 'url'
 import { existsSync } from 'fs'
 import { deleteImageByPath } from './db'
+import { autoUpdater } from 'electron-updater'
+
+// Configure autoUpdater
+autoUpdater.autoDownload = false
 
 function createWindow(): void {
   // Create the browser window.
@@ -21,6 +25,18 @@ function createWindow(): void {
   })
 
   setupIPC(mainWindow)
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow.webContents.send('app:update-available', info)
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    mainWindow.webContents.send('app:update-not-available')
+  })
+
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify()
+  }
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()

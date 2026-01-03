@@ -1,4 +1,5 @@
-import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import * as fs from 'fs'
 import { scanDirectory } from './scanner'
 import {
@@ -113,5 +114,16 @@ export function setupIPC(mainWindow: BrowserWindow) {
     // Start processing queue in background
     processQueue(mainWindow)
     return { success: true, removedCount: removed }
+  })
+
+  ipcMain.handle('app:getVersion', () => {
+    return app.getVersion()
+  })
+
+  ipcMain.handle('app:checkForUpdates', async () => {
+    if (app.isPackaged) {
+      return await autoUpdater.checkForUpdatesAndNotify()
+    }
+    return null
   })
 }

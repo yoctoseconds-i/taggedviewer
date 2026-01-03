@@ -42,6 +42,9 @@ function App(): JSX.Element {
     showItemInFolder,
     clearLibrary,
     rescanLibrary,
+    version,
+    updateStatus,
+    checkForUpdates,
   } = useIpc(loadData)
 
   useEffect(() => {
@@ -158,6 +161,9 @@ function App(): JSX.Element {
         onUpdateThreadCount={handleUpdateThreadCount}
         onRescan={rescanLibrary}
         onClear={clearLibrary}
+        version={version}
+        updateStatus={updateStatus}
+        onCheckForUpdates={checkForUpdates}
       />
     </div>
   )
