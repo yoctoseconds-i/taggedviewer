@@ -77,9 +77,6 @@ export async function processQueue(win: BrowserWindow) {
                 total: totalToProcess,
                 current: processedCount,
                 image: image,
-                // Resulting tags might not be in DB yet, but for UI feedback it's usually okay
-                // or we can omit them and let UI refresh after batch.
-                // For simplicity, we send current image and its tags.
                 tags: tags.map((t) => ({ name: t })),
               })
             }

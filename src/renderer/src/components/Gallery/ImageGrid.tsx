@@ -6,6 +6,8 @@ import { forwardRef } from 'react'
 interface ImageGridProps {
   images: ImageType[]
   onImageClick: (index: number) => void
+  loadMore?: () => void
+  hasMore?: boolean
 }
 
 const GridContainer = forwardRef<HTMLDivElement, any>(({ style, children, ...props }, ref) => (
@@ -25,7 +27,7 @@ const ItemContainer = ({ children, ...props }: any) => (
   </div>
 )
 
-export const ImageGrid = ({ images, onImageClick }: ImageGridProps) => {
+export const ImageGrid = ({ images, onImageClick, loadMore, hasMore }: ImageGridProps) => {
   if (images.length === 0) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center text-gray-600 space-y-4 animate-in fade-in zoom-in duration-500">
@@ -44,6 +46,12 @@ export const ImageGrid = ({ images, onImageClick }: ImageGridProps) => {
     <VirtuosoGrid
       style={{ height: '100%' }}
       totalCount={images.length}
+      endReached={() => {
+        if (hasMore && loadMore) {
+          loadMore()
+        }
+      }}
+      overscan={200}
       components={{
         List: GridContainer,
         Item: ItemContainer,

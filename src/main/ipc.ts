@@ -55,16 +55,27 @@ export function setupIPC(mainWindow: BrowserWindow) {
     return await processQueue(mainWindow)
   })
 
-  ipcMain.handle('db:getImages', async () => {
-    return await getAllImages.all()
+  ipcMain.handle('db:getImages', async (_, limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc') => {
+    return await getAllImages.all(limit, offset, sortBy, order)
+  })
+
+  ipcMain.handle('db:getImageCount', async () => {
+    const { getImageCount } = await import('./db')
+    return await getImageCount.get()
   })
 
   ipcMain.handle('db:getTags', async () => {
     return await getAllTags.all()
   })
 
-  ipcMain.handle('db:getImagesByTag', async (_, tagName: string) => {
-    return await getImagesByTag.get({ tagName })
+  ipcMain.handle('db:getImagesByTags', async (_, tagNames: string[], limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc') => {
+    const { getImagesByTags } = await import('./db')
+    return await getImagesByTags.get({ tagNames, limit, offset, sortBy, order })
+  })
+
+  ipcMain.handle('db:getImagesByTagsCount', async (_, tagNames: string[]) => {
+    const { getImagesByTagsCount } = await import('./db')
+    return await getImagesByTagsCount.get({ tagNames })
   })
 
   ipcMain.handle('db:clear', async () => {

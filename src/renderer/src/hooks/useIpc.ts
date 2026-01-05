@@ -21,10 +21,8 @@ export const useIpc = (loadData: () => void) => {
       (_, data: { total: number; current: number; image?: Image; tags?: Tag[] }) => {
         setScanProgress({ total: data.total, current: data.current })
         setIsScanning(data.current < data.total)
-        if (data.image) {
-          // Incremental update could be done here, but loadData is safer for consistency
-          loadData()
-        }
+        // Always reload data to show progress (Phase 1: new items, Phase 2: processed status)
+        loadData()
       }
     )
 

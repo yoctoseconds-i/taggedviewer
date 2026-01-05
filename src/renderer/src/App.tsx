@@ -9,11 +9,13 @@ import { Sidebar } from './components/Sidebar/Sidebar'
 import { ImageGrid } from './components/Gallery/ImageGrid'
 import { ImageViewer } from './components/Gallery/ImageViewer'
 import { ScanningProgress } from './components/Gallery/ScanningProgress'
+import { SelectedTagsBar } from './components/Gallery/SelectedTagsBar'
+import { SortControl, SortKey, SortOrder } from './components/Gallery/SortControl'
 
 function App(): JSX.Element {
   const [images, setImages] = useState<Image[]>([])
   const [tags, setTags] = useState<Tag[]>([])
-  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [selectedImageTags, setSelectedImageTags] = useState<Tag[]>([])
   const [tagSort, setTagSort] = useState<'name' | 'count'>('count')
@@ -21,17 +23,66 @@ function App(): JSX.Element {
   const [showSettings, setShowSettings] = useState(false)
   const [settings, setSettings] = useState<Settings>({ threadCount: 2 })
 
-  const loadData = useCallback(async () => {
-    // @ts-ignore
-    const imgs = await window.electron.ipcRenderer.invoke(
-      activeTag ? 'db:getImagesByTag' : 'db:getImages',
-      activeTag
-    )
-    // @ts-ignore
-    const tgs = await window.electron.ipcRenderer.invoke('db:getTags')
-    setImages(imgs)
-    setTags(tgs)
-  }, [activeTag])
+  // Sort state
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+
+  const [hasMore, setHasMore] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
+
+  const loadData = useCallback(async (isInitial = false) => {
+    // Determine if we should block.
+    // If it's a "load more" (not initial), block if already loading.
+    // If it's initial, we allow it (effectively canceling the visual effect of previous loads by replacing data)
+    // Ideally we would cancel the previous promise, but for now we just allow the new one to run.
+    if (loading && !isInitial) return
+    setLoading(true)
+
+    try {
+      const limit = 100
+      const offset = isInitial ? 0 : images.length
+
+      let imgs // ...
+      if (selectedTags.length > 0) {
+        // @ts-ignore
+        imgs = await window.electron.ipcRenderer.invoke(
+          'db:getImagesByTags',
+          selectedTags,
+          limit,
+          offset,
+          sortKey,
+          sortOrder
+        )
+      } else {
+        // @ts-ignore
+        imgs = await window.electron.ipcRenderer.invoke('db:getImages', limit, offset, sortKey, sortOrder)
+      }
+
+      if (isInitial) {
+        setImages(imgs)
+        let count = 0
+        if (selectedTags.length > 0) {
+          // @ts-ignore
+          count = await window.electron.ipcRenderer.invoke('db:getImagesByTagsCount', selectedTags)
+        } else {
+          // @ts-ignore
+          count = await window.electron.ipcRenderer.invoke('db:getImageCount')
+        }
+        setTotalCount(count)
+        setHasMore(imgs.length < count)
+      } else {
+        setImages((prev) => [...prev, ...imgs])
+        setHasMore(imgs.length === limit)
+      }
+
+      // @ts-ignore
+      const tgs = await window.electron.ipcRenderer.invoke('db:getTags')
+      setTags(tgs)
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedTags, images.length, loading, sortKey, sortOrder])
 
   const {
     isScanning,
@@ -45,7 +96,7 @@ function App(): JSX.Element {
     version,
     updateStatus,
     checkForUpdates,
-  } = useIpc(loadData)
+  } = useIpc(async () => loadData(true))
 
   useEffect(() => {
     const init = async () => {
@@ -57,14 +108,17 @@ function App(): JSX.Element {
       // @ts-ignore
       await window.electron.ipcRenderer.invoke('scan:resume')
       setIsScanning(false)
-      loadData()
+      loadData(true)
     }
     init()
-  }, [loadData, setIsScanning])
+  }, [setIsScanning])
 
   useEffect(() => {
-    loadData()
-  }, [activeTag, loadData])
+    setImages([])
+    setTotalCount(0)
+    setLoading(false) // Force reset loading state to ensure new fetch runs
+    loadData(true)
+  }, [selectedTags, sortKey, sortOrder])
 
   useEffect(() => {
     if (selectedImageIndex !== null) {
@@ -97,7 +151,17 @@ function App(): JSX.Element {
   }
 
   const handleTagClick = (tagName: string | null) => {
-    setActiveTag(tagName)
+    if (!tagName) {
+      setSelectedTags([])
+      return
+    }
+
+    setSelectedTags(prev => {
+      if (prev.includes(tagName)) {
+        return prev.filter(t => t !== tagName)
+      }
+      return [...prev, tagName]
+    })
     setSelectedImageIndex(null)
   }
 
@@ -105,7 +169,7 @@ function App(): JSX.Element {
     <div className="flex h-screen bg-black text-gray-100 overflow-hidden font-sans selection:bg-indigo-500/30">
       <Sidebar
         tags={filteredTags}
-        activeTag={activeTag}
+        activeTags={selectedTags}
         onTagClick={handleTagClick}
         tagSort={tagSort}
         onToggleSort={() => setTagSort((prev) => (prev === 'name' ? 'count' : 'name'))}
@@ -116,9 +180,31 @@ function App(): JSX.Element {
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-gray-950/50 relative">
+        <div className="flex items-center justify-between p-2 pb-0">
+          <SelectedTagsBar
+            selectedTags={selectedTags}
+            onRemoveTag={(t) => handleTagClick(t)}
+            onClearAll={() => setSelectedTags([])}
+          />
+          <div className="ml-auto px-2">
+            <SortControl
+              sortKey={sortKey}
+              sortOrder={sortOrder}
+              onSortChange={(k, o) => {
+                setSortKey(k)
+                setSortOrder(o)
+              }}
+            />
+          </div>
+        </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {images.length > 0 ? (
-            <ImageGrid images={images} onImageClick={setSelectedImageIndex} />
+            <ImageGrid
+              images={images}
+              onImageClick={setSelectedImageIndex}
+              loadMore={() => loadData(false)}
+              hasMore={hasMore}
+            />
           ) : !isScanning ? (
             <div className="flex-1 h-full flex flex-col items-center justify-center text-gray-500 space-y-4">
               <FolderOpen className="w-16 h-16 text-gray-800" />
@@ -147,7 +233,7 @@ function App(): JSX.Element {
             onOpenFolder={showItemInFolder}
             onToggleFavorite={toggleFavorite}
             onTagClick={(name) => {
-              setActiveTag(name)
+              setSelectedTags([name])
               setSelectedImageIndex(null)
             }}
           />
