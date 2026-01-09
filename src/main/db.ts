@@ -8,6 +8,7 @@ export interface Image {
   filepath: string
   hash?: string
   scanned_at: string
+  file_modified_at?: string
   processed?: boolean
 }
 
@@ -18,6 +19,12 @@ export interface Tag {
   is_favorite?: boolean
 }
 
+export interface TagGroup {
+  id: number
+  name: string
+  tags: Tag[]
+}
+
 export interface ImageTag {
   image_id: number
   tag_id: number
@@ -26,6 +33,7 @@ export interface ImageTag {
 
 export interface Settings {
   threadCount: number
+  language?: string
 }
 
 const dbPath = join(app.getPath('userData'), 'taggedviewer-db-v2.sqlite')
@@ -50,7 +58,8 @@ const getOrderByClause = (sortBy: string = 'date', order: 'asc' | 'desc' = 'desc
       return 'ORDER BY RANDOM()'
     case 'date':
     default:
-      return `ORDER BY i.scanned_at ${dir}`
+      // Fallback to scanned_at if file_modified_at is null
+      return `ORDER BY COALESCE(i.file_modified_at, i.scanned_at) ${dir}`
   }
 }
 
@@ -61,6 +70,7 @@ db.exec(`
     filepath TEXT UNIQUE,
     hash TEXT,
     scanned_at TEXT,
+    file_modified_at TEXT,
     processed INTEGER DEFAULT 0
   );
 
@@ -86,6 +96,18 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_images_scanned_at ON images(scanned_at DESC);
   CREATE INDEX IF NOT EXISTS idx_image_tags_tag_id ON image_tags(tag_id);
+  CREATE TABLE IF NOT EXISTS tag_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE
+  );
+
+  CREATE TABLE IF NOT EXISTS tag_group_tags (
+    group_id INTEGER,
+    tag_id INTEGER,
+    PRIMARY KEY (group_id, tag_id),
+    FOREIGN KEY (group_id) REFERENCES tag_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+  );
 `)
 
 // Migration from LowDB
@@ -94,7 +116,9 @@ if (existsSync(oldDbPath)) {
     const data = JSON.parse(readFileSync(oldDbPath, 'utf8'))
     db.transaction(() => {
       // Import images
-      const insertImg = db.prepare('INSERT OR IGNORE INTO images (filepath, hash, scanned_at, processed) VALUES (?, ?, ?, ?)')
+      const insertImg = db.prepare(
+        'INSERT OR IGNORE INTO images (filepath, hash, scanned_at, processed) VALUES (?, ?, ?, ?)'
+      )
       for (const img of data.images || []) {
         insertImg.run(img.filepath, img.hash || null, img.scanned_at, img.processed ? 1 : 0)
       }
@@ -106,12 +130,18 @@ if (existsSync(oldDbPath)) {
       }
 
       // Import links
-      const insertLink = db.prepare('INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, ?)')
+      const insertLink = db.prepare(
+        'INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, ?)'
+      )
       // We need to map old IDs to new IDs because lowdb used Date.now()
       const imgMap = new Map()
-      db.prepare('SELECT id, filepath FROM images').all().forEach((row: any) => imgMap.set(row.filepath, row.id))
+      db.prepare('SELECT id, filepath FROM images')
+        .all()
+        .forEach((row: any) => imgMap.set(row.filepath, row.id))
       const tagMap = new Map()
-      db.prepare('SELECT id, name FROM tags').all().forEach((row: any) => tagMap.set(row.name, row.id))
+      db.prepare('SELECT id, name FROM tags')
+        .all()
+        .forEach((row: any) => tagMap.set(row.name, row.id))
 
       const oldImgMap = new Map()
       for (const img of data.images || []) oldImgMap.set(img.id, img.filepath)
@@ -130,7 +160,10 @@ if (existsSync(oldDbPath)) {
 
       // Settings
       if (data.settings) {
-        db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('threadCount', JSON.stringify(data.settings.threadCount))
+        db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
+          'threadCount',
+          JSON.stringify(data.settings.threadCount)
+        )
       }
     })()
     renameSync(oldDbPath, oldDbPath + '.bak')
@@ -140,19 +173,47 @@ if (existsSync(oldDbPath)) {
   }
 }
 
+// Migration: Add file_modified_at if missing
+try {
+  const tableInfo = db.prepare('PRAGMA table_info(images)').all()
+  const hasModifiedAt = tableInfo.some((col: any) => col.name === 'file_modified_at')
+  if (!hasModifiedAt) {
+    console.log('[DB] Applying migration: Add file_modified_at column')
+    db.prepare('ALTER TABLE images ADD COLUMN file_modified_at TEXT').run()
+    db.prepare(
+      'CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC)'
+    ).run()
+  }
+} catch (e) {
+  console.error('[DB] Schema migration failed', e)
+}
+
+// Ensure index exists (safe to run after migration/table creation)
+try {
+  db.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC)'
+  ).run()
+} catch (e) {
+  console.error('[DB] Index creation failed', e)
+}
+
 export const insertImagesBulk = {
-  run: async (filepaths: string[]) => {
+  run: async (filepaths: string[], mtimes?: Record<string, string>) => {
     const results: { id: number; filepath: string; inserted: boolean }[] = []
     const checkStmt = db.prepare('SELECT id FROM images WHERE filepath = ?')
-    const insertStmt = db.prepare('INSERT INTO images (filepath, scanned_at, processed) VALUES (?, ?, 0)')
+    const insertStmt = db.prepare(
+      'INSERT INTO images (filepath, scanned_at, file_modified_at, processed) VALUES (?, ?, ?, 0)'
+    )
 
     db.transaction(() => {
       for (const filepath of filepaths) {
         const existing = checkStmt.get(filepath) as any
         if (existing) {
           results.push({ id: existing.id, filepath, inserted: false })
+          // Optionally update mtime if existing?
         } else {
-          const res = insertStmt.run(filepath, new Date().toISOString())
+          const mtime = mtimes ? mtimes[filepath] : null
+          const res = insertStmt.run(filepath, new Date().toISOString(), mtime)
           results.push({ id: res.lastInsertRowid as number, filepath, inserted: true })
         }
       }
@@ -188,12 +249,21 @@ export const getImage = {
 }
 
 export const getAllImages = {
-  all: async (limit: number = 100, offset: number = 0, sortBy: string = 'date', order: 'asc' | 'desc' = 'desc') => {
-    return db.prepare(`
+  all: async (
+    limit: number = 100,
+    offset: number = 0,
+    sortBy: string = 'date',
+    order: 'asc' | 'desc' = 'desc'
+  ) => {
+    return db
+      .prepare(
+        `
       SELECT * FROM images i
       ${getOrderByClause(sortBy, order)}
       LIMIT ? OFFSET ?
-    `).all(limit, offset) as Image[]
+    `
+      )
+      .all(limit, offset) as Image[]
   },
 }
 
@@ -201,7 +271,7 @@ export const getImageCount = {
   get: async () => {
     const res = db.prepare('SELECT COUNT(*) as count FROM images').get() as any
     return res.count
-  }
+  },
 }
 
 export const insertTagsBulk = {
@@ -228,13 +298,17 @@ export const insertTag = {
 export const getAllTags = {
   all: async () => {
     // High performance tag counting using SQL
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       SELECT t.*, COUNT(it.image_id) as count
       FROM tags t
       LEFT JOIN image_tags it ON t.id = it.tag_id
       GROUP BY t.id
       ORDER BY t.name ASC
-    `).all() as Tag[]
+    `
+      )
+      .all() as Tag[]
   },
 }
 
@@ -247,7 +321,9 @@ export const toggleFavoriteTag = {
 
 export const linkImageTagsBulk = {
   run: async (links: { imageId: number; tagId: number }[]) => {
-    const stmt = db.prepare('INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, ?)')
+    const stmt = db.prepare(
+      'INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, ?)'
+    )
     db.transaction(() => {
       for (const link of links) {
         stmt.run(link.imageId, link.tagId, 1.0)
@@ -260,7 +336,9 @@ export const processImageResultsBulk = {
   run: async (imageResults: { imageId: number; tagNames: string[] }[]) => {
     const insertTagStmt = db.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)')
     const getTagIdStmt = db.prepare('SELECT id FROM tags WHERE name = ?')
-    const linkStmt = db.prepare('INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, 1.0)')
+    const linkStmt = db.prepare(
+      'INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, 1.0)'
+    )
     const markDoneStmt = db.prepare('UPDATE images SET processed = 1 WHERE id = ?')
 
     db.transaction(() => {
@@ -281,11 +359,19 @@ export const processImageResultsBulk = {
 }
 
 export const getImagesByTags = {
-  get: async (pt: { tagNames: string[], limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc' }) => {
+  get: async (pt: {
+    tagNames: string[]
+    limit?: number
+    offset?: number
+    sortBy?: string
+    order?: 'asc' | 'desc'
+  }) => {
     if (!pt.tagNames || pt.tagNames.length === 0) return []
 
     const placeholders = pt.tagNames.map(() => '?').join(',')
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       SELECT i.* FROM images i
       JOIN image_tags it ON i.id = it.image_id
       JOIN tags t ON it.tag_id = t.id
@@ -294,7 +380,9 @@ export const getImagesByTags = {
       HAVING COUNT(DISTINCT t.id) = ?
       ${getOrderByClause(pt.sortBy, pt.order)}
       LIMIT ? OFFSET ?
-    `).all(...pt.tagNames, pt.tagNames.length, pt.limit || 100, pt.offset || 0) as Image[]
+    `
+      )
+      .all(...pt.tagNames, pt.tagNames.length, pt.limit || 100, pt.offset || 0) as Image[]
   },
 }
 
@@ -303,7 +391,9 @@ export const getImagesByTagsCount = {
     if (!pt.tagNames || pt.tagNames.length === 0) return 0
 
     const placeholders = pt.tagNames.map(() => '?').join(',')
-    const res = db.prepare(`
+    const res = db
+      .prepare(
+        `
       SELECT COUNT(*) as count FROM (
         SELECT i.id FROM images i
         JOIN image_tags it ON i.id = it.image_id
@@ -312,20 +402,26 @@ export const getImagesByTagsCount = {
         GROUP BY i.id
         HAVING COUNT(DISTINCT t.id) = ?
       )
-    `).get(...pt.tagNames, pt.tagNames.length) as any
+    `
+      )
+      .get(...pt.tagNames, pt.tagNames.length) as any
     return res?.count || 0
-  }
+  },
 }
 
 export const getTagsForImage = {
   get: async (pt: { imageId: number }) => {
-    return db.prepare(`
+    return db
+      .prepare(
+        `
       SELECT t.*, (SELECT COUNT(*) FROM image_tags it2 WHERE it2.tag_id = t.id) as count
       FROM tags t
       JOIN image_tags it ON t.id = it.tag_id
       WHERE it.image_id = ?
       ORDER BY t.name ASC
-    `).all(pt.imageId) as Tag[]
+    `
+      )
+      .all(pt.imageId) as Tag[]
   },
 }
 
@@ -361,17 +457,127 @@ export const deleteImageByPath = {
 
 export const getSettings = {
   get: async () => {
-    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('threadCount') as any
-    return { threadCount: row ? JSON.parse(row.value) : 2 }
+    const threadRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('threadCount') as any
+    const langRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('language') as any
+    const settings: Settings = {
+      threadCount: threadRow ? JSON.parse(threadRow.value) : 2,
+      language: langRow ? JSON.parse(langRow.value) : 'en'
+    }
+    return settings
   },
 }
 
 export const updateSettings = {
   run: async (settings: Partial<Settings>) => {
     if (settings.threadCount !== undefined) {
-      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('threadCount', JSON.stringify(settings.threadCount))
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
+        'threadCount',
+        JSON.stringify(settings.threadCount)
+      )
+    }
+    if (settings.language !== undefined) {
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
+        'language',
+        JSON.stringify(settings.language)
+      )
     }
     return getSettings.get()
+  },
+}
+
+// Backfill utility
+
+export const createTagGroup = {
+  run: async (pt: { name: string; tagIds: number[] }) => {
+    const insertGroup = db.prepare('INSERT INTO tag_groups (name) VALUES (?)')
+    const insertLink = db.prepare('INSERT INTO tag_group_tags (group_id, tag_id) VALUES (?, ?)')
+
+    let groupId: number | bigint = 0
+    db.transaction(() => {
+      const res = insertGroup.run(pt.name)
+      groupId = res.lastInsertRowid
+      for (const tagId of pt.tagIds) {
+        insertLink.run(groupId, tagId)
+      }
+    })()
+
+    return getAllTagGroups.get()
+  }
+}
+
+export const updateTagGroup = {
+  run: async (pt: { id: number; name: string; tagIds: number[] }) => {
+    const updateGroup = db.prepare('UPDATE tag_groups SET name = ? WHERE id = ?')
+    const deleteLinks = db.prepare('DELETE FROM tag_group_tags WHERE group_id = ?')
+    const insertLink = db.prepare('INSERT INTO tag_group_tags (group_id, tag_id) VALUES (?, ?)')
+
+    db.transaction(() => {
+      updateGroup.run(pt.name, pt.id)
+      deleteLinks.run(pt.id)
+      for (const tagId of pt.tagIds) {
+        insertLink.run(pt.id, tagId)
+      }
+    })()
+
+    return getAllTagGroups.get()
+  }
+}
+
+export const deleteTagGroup = {
+  run: async (pt: { id: number }) => {
+    db.prepare('DELETE FROM tag_groups WHERE id = ?').run(pt.id)
+    return getAllTagGroups.get()
+  }
+}
+
+export const getAllTagGroups = {
+  get: async () => {
+    const groups = db.prepare('SELECT * FROM tag_groups ORDER BY name ASC').all() as any[]
+
+    const groupsWithTags = groups.map(group => {
+      const tags = db.prepare(`
+        SELECT t.* 
+        FROM tags t
+        JOIN tag_group_tags tgt ON t.id = tgt.tag_id
+        WHERE tgt.group_id = ?
+        ORDER BY t.name ASC
+      `).all(group.id) as Tag[]
+      return { ...group, tags } as TagGroup
+    })
+
+    return groupsWithTags
+  }
+}
+
+export const backfillFileDates = {
+  run: async () => {
+    const images = db
+      .prepare('SELECT id, filepath FROM images WHERE file_modified_at IS NULL')
+      .all() as Image[]
+    if (images.length === 0) return { count: 0 }
+
+    const updateStmt = db.prepare('UPDATE images SET file_modified_at = ? WHERE id = ?')
+    let updated = 0
+
+    db.transaction(() => {
+      for (const img of images) {
+        try {
+          // Need fs to be available here, or pass it in. db.ts imports fs constants but not statSync easily without modifying imports
+          // Actually imports are at top: import { existsSync, readFileSync, renameSync } from 'fs'
+          // Let's rely on the caller or just import statSync here.
+          // Since we are in node, we can require 'fs'.
+          const fs = require('fs')
+          if (fs.existsSync(img.filepath)) {
+            const stats = fs.statSync(img.filepath)
+            updateStmt.run(stats.mtime.toISOString(), img.id)
+            updated++
+          }
+        } catch {
+          // ignore missing files
+        }
+      }
+    })()
+    return { count: updated }
   },
 }
 

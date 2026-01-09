@@ -40,6 +40,17 @@ npm run dev
 npm run build
 ```
 
+## テスト戦略
+開発の効率と品質を両立させるため、以下のルールでテストを運用します。
+
+1.  **段階的なカバレッジ向上**:
+    - 全体のカバレッジを一度に上げることは目指しません。
+    - バグ修正や新機能追加の際、**その対象となるコンポーネントや関数に対して**テストを追加・修正します。
+
+2.  **テスト実行**:
+    - `npm run test` (Lint + Unit Test)
+    - `npm run test:coverage` (Coverage Report)
+
 ## 技術スタック
 
 - **Frontend**: React, Tailwind CSS, Lucide React

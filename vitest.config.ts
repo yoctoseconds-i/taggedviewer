@@ -8,7 +8,18 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/renderer/src/test/setup.ts'],
-    include: ['src/renderer/src/**/*.{test,spec}.{ts,tsx}', 'src/main/**/*.{test,spec}.ts'],
+    include: [
+      'src/renderer/src/**/*.{test,spec}.{ts,tsx}',
+      'src/main/**/*.{test,spec}.ts',
+      'tests/**/*.{test,spec}.ts',
+    ],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/out/**', 'tests/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/preload/**', 'src/renderer/src/main.tsx'],
+    },
   },
   resolve: {
     alias: {

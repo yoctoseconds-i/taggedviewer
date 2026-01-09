@@ -8,7 +8,7 @@ describe('Sidebar', () => {
       { id: 1, name: 'tag1', count: 10, is_favorite: 1 },
       { id: 2, name: 'tag2', count: 5, is_favorite: 0 },
     ],
-    activeTag: null,
+    activeTags: [],
     onTagClick: vi.fn(),
     tagSort: 'name' as const,
     onToggleSort: vi.fn(),

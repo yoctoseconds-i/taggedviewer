@@ -1,0 +1,19 @@
+
+> taggedviewer@0.1.4 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+
+ESLint found too many warnings (maximum: 0).
+
+F:\codes\antigravity\taggedviewer\src\main\db.ts
+  482:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\codes\antigravity\taggedviewer\src\main\ipc.ts
+  9:3  warning  'getImagesByTag' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+F:\codes\antigravity\taggedviewer\src\renderer\src\App.tsx
+   32:10  warning  'totalCount' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars
+  126:6   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  133:6   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+笨・5 problems (0 errors, 5 warnings)
+

@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, protocol, net } from 'electron'
 import { join, normalize } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIPC } from './ipc'
+import { backfillFileDates } from './db'
 import { pathToFileURL } from 'url'
 import { existsSync } from 'fs'
 import { autoUpdater } from 'electron-updater'
@@ -24,6 +25,17 @@ export function startMainApp() {
     })
 
     setupIPC(mainWindow)
+
+    // Auto-maintenance: Backfill file dates for existing images if needed
+    setTimeout(() => {
+      console.log('[Main] Starting background maintenance: Backfill dates')
+      backfillFileDates
+        .run()
+        .then((res) => {
+          if (res.count > 0) console.log(`[Main] Backfilled dates for ${res.count} images`)
+        })
+        .catch((err) => console.error('[Main] Backfill failed', err))
+    }, 5000)
 
     autoUpdater.on('update-available', (info) => {
       mainWindow.webContents.send('app:update-available', info)
@@ -64,8 +76,8 @@ export function startMainApp() {
     protocol.handle('media', async (request) => {
       try {
         const url = new URL(request.url)
-        let p = decodeURIComponent(url.pathname)
-        let host = decodeURIComponent(url.host)
+        const p = decodeURIComponent(url.pathname)
+        const host = decodeURIComponent(url.host)
         const size = url.searchParams.get('size')
 
         let filePath = ''

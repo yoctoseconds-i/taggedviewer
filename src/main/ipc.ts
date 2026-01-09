@@ -6,7 +6,6 @@ import {
   insertImagesBulk,
   getAllImages,
   getAllTags,
-  getImagesByTag,
   clearDatabase,
   resetProcessed,
   toggleFavoriteTag,
@@ -14,6 +13,11 @@ import {
   getSettings,
   updateSettings,
   deleteImageByPath,
+  backfillFileDates,
+  createTagGroup,
+  updateTagGroup,
+  deleteTagGroup,
+  getAllTagGroups,
 } from './db'
 import { processQueue, setTargetThreads } from './services/QueueService'
 
@@ -40,7 +44,17 @@ export function setupIPC(mainWindow: BrowserWindow) {
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
       if (mainWindow.isDestroyed()) return { success: false, count: 0 }
       const batch = files.slice(i, i + BATCH_SIZE)
-      await insertImagesBulk.run(batch)
+
+      const filepaths = batch.map((f) => f.path)
+      const mtimes = batch.reduce(
+        (acc, f) => {
+          acc[f.path] = f.mtime.toISOString()
+          return acc
+        },
+        {} as Record<string, string>
+      )
+
+      await insertImagesBulk.run(filepaths, mtimes)
       mainWindow.webContents.send('scan:progress', {
         total: files.length,
         current: Math.min(i + batch.length, files.length),
@@ -55,9 +69,12 @@ export function setupIPC(mainWindow: BrowserWindow) {
     return await processQueue(mainWindow)
   })
 
-  ipcMain.handle('db:getImages', async (_, limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc') => {
-    return await getAllImages.all(limit, offset, sortBy, order)
-  })
+  ipcMain.handle(
+    'db:getImages',
+    async (_, limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc') => {
+      return await getAllImages.all(limit, offset, sortBy, order)
+    }
+  )
 
   ipcMain.handle('db:getImageCount', async () => {
     const { getImageCount } = await import('./db')
@@ -68,10 +85,20 @@ export function setupIPC(mainWindow: BrowserWindow) {
     return await getAllTags.all()
   })
 
-  ipcMain.handle('db:getImagesByTags', async (_, tagNames: string[], limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc') => {
-    const { getImagesByTags } = await import('./db')
-    return await getImagesByTags.get({ tagNames, limit, offset, sortBy, order })
-  })
+  ipcMain.handle(
+    'db:getImagesByTags',
+    async (
+      _,
+      tagNames: string[],
+      limit?: number,
+      offset?: number,
+      sortBy?: string,
+      order?: 'asc' | 'desc'
+    ) => {
+      const { getImagesByTags } = await import('./db')
+      return await getImagesByTags.get({ tagNames, limit, offset, sortBy, order })
+    }
+  )
 
   ipcMain.handle('db:getImagesByTagsCount', async (_, tagNames: string[]) => {
     const { getImagesByTagsCount } = await import('./db')
@@ -137,5 +164,34 @@ export function setupIPC(mainWindow: BrowserWindow) {
       return await autoUpdater.checkForUpdatesAndNotify()
     }
     return null
+  })
+
+  // Trigger one-time backfill on startup if needed (called from renderer or just exposes it)
+  // For now we can just run it once at startup or via a manual trigger.
+  // Let's explicitly call it when setupIPC is done or expose it.
+  // Since this might take time, let's just expose it for now or rely on the fact that scanning triggers it? No.
+  // Let's add an explicit IPC to trigger maintenance tasks.
+  ipcMain.handle('db:maintenance:fixDates', async () => {
+    console.log('[IPC] Starting date backfill...')
+    const result = await backfillFileDates.run()
+    console.log(`[IPC] Date backfill completed: ${result.count} updated.`)
+    return result
+  })
+
+  // Tag Groups
+  ipcMain.handle('db:createTagGroup', async (_, { name, tagIds }: { name: string; tagIds: number[] }) => {
+    return await createTagGroup.run({ name, tagIds })
+  })
+
+  ipcMain.handle('db:updateTagGroup', async (_, { id, name, tagIds }: { id: number; name: string; tagIds: number[] }) => {
+    return await updateTagGroup.run({ id, name, tagIds })
+  })
+
+  ipcMain.handle('db:deleteTagGroup', async (_, { id }: { id: number }) => {
+    return await deleteTagGroup.run({ id })
+  })
+
+  ipcMain.handle('db:getTagGroups', async () => {
+    return await getAllTagGroups.get()
   })
 }

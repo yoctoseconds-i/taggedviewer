@@ -1,0 +1,88 @@
+{
+    "app": {
+        "title": "Tagged",
+        "titleSuffix": "Viewer",
+        "emptyLibrary": "Your library is empty",
+        "selectFolder": "Select Folder to Scan"
+    },
+    "sidebar": {
+        "searchPlaceholder": "Search tags...",
+        "allImages": "All Images",
+        "favorites": "Favorites",
+        "tags": "Tags",
+        "tagGroups": "Tag Groups",
+        "noGroups": "No groups created",
+        "createGroup": "Create Tag Group",
+        "editGroup": "Edit Group",
+        "settings": "Settings",
+        "toggleSort": "Toggle Sort Order"
+    },
+    "settings": {
+        "title": "Settings",
+        "language": "Language",
+        "threadCount": "Worker Threads",
+        "performance": "Performance",
+        "library": "Library",
+        "rescan": "Rescan Library",
+        "rescanDesc": "Check for missing files and re-index",
+        "clear": "Clear Database",
+        "clearDesc": "Remove all images and tags (Cannot be undone)",
+        "version": "Version",
+        "updateStatus": {
+            "checking": "Checking for updates...",
+            "available": "Update available",
+            "latest": "Latest version installed",
+            "error": "Error checking for updates",
+            "newVersion": "New Version Available: v",
+            "download": "Go to GitHub to download the latest installer.",
+            "getUpdate": "Get Update"
+        },
+        "checkUpdates": "Check for Updates",
+        "softwareUpdates": "Software Updates",
+        "softwareUpdatesDesc": "Check for latest versions on GitHub.",
+        "appInfo": "App Information",
+        "threadCountDesc": "Determines how many images are analyzed simultaneously. Higher values speed up scanning but consume more GPU/CPU resources.",
+        "singleStable": "Single (Stable)",
+        "faster": "Faster",
+        "aggressive": "Aggressive",
+        "dangerZone": "DANGER ZONE",
+        "dangerZoneDesc": "Destructive action. Resets all tags and associations."
+    },
+    "viewer": {
+        "fileInfo": "File Information",
+        "showInExplorer": "Show in Explorer",
+        "tags": "Tags"
+    },
+    "gallery": {
+        "loadMore": "Load More",
+        "endOfLibrary": "End of library",
+        "selected": "Selected",
+        "clearAll": "Clear All",
+        "sortBy": "Sort by",
+        "date": "Date",
+        "name": "Name",
+        "ext": "Extension",
+        "ext": "Extension",
+        "random": "Random",
+        "filters": "Filters:",
+        "scanning": "Scanning Library"
+    },
+    "common": {
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "confirmDelete": "Are you sure you want to delete this group?",
+        "create": "Create",
+        "edit": "Edit",
+        "remove": "Remove"
+    },
+    "groupModal": {
+        "newTitle": "New Tag Group",
+        "editTitle": "Edit Tag Group",
+        "nameLabel": "Group Name",
+        "namePlaceholder": "e.g. Character Features...",
+        "includeLabel": "Include Tags",
+        "searchPlaceholder": "Search tags to add...",
+        "noTagsFound": "No tags found matching"
+    }
+}

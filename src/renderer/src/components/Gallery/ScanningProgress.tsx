@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface ScanningProgressProps {
   current: number
@@ -6,6 +7,7 @@ interface ScanningProgressProps {
 }
 
 export const ScanningProgress = ({ current, total }: ScanningProgressProps) => {
+  const { t } = useTranslation()
   const progress = total > 0 ? (current / total) * 100 : 0
 
   return (
@@ -20,7 +22,7 @@ export const ScanningProgress = ({ current, total }: ScanningProgressProps) => {
         <div className="flex-1">
           <div className="flex justify-between items-end mb-1.5">
             <p className="text-xs font-black text-white uppercase tracking-tighter">
-              Scanning Library
+              {t('gallery.scanning')}
             </p>
             <p className="text-[10px] font-mono text-gray-500">
               {current} / {total}

@@ -13,6 +13,12 @@ export interface Tag {
   is_favorite?: boolean
 }
 
+export interface TagGroup {
+  id: number
+  name: string
+  tags: Tag[]
+}
+
 export interface ImageTag {
   image_id: number
   tag_id: number
@@ -21,4 +27,5 @@ export interface ImageTag {
 
 export interface Settings {
   threadCount: number
+  language?: string
 }
