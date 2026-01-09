@@ -2,6 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { Sidebar } from './Sidebar'
 
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
 describe('Sidebar', () => {
   const defaultProps = {
     tags: [
@@ -15,13 +22,17 @@ describe('Sidebar', () => {
     onOpenSettings: vi.fn(),
     tagSearchTerm: '',
     onSearchChange: vi.fn(),
-    onToggleFavorite: vi.fn(), // This is expected but currently missing in types/impl
+    onToggleFavorite: vi.fn(),
+    tagGroups: [],
+    onGroupClick: vi.fn(),
+    onCreateGroup: vi.fn(),
+    onEditGroup: vi.fn(),
   }
 
   it('renders favorite tags in a separate section', () => {
     render(<Sidebar {...defaultProps} />)
-    expect(screen.getByText('Favorites')).toBeInTheDocument()
-    expect(screen.getByText('Tags')).toBeInTheDocument()
+    expect(screen.getByText('sidebar.favorites')).toBeInTheDocument()
+    expect(screen.getByText('sidebar.tags')).toBeInTheDocument()
   })
 
   it('renders a star button to toggle favorites', () => {

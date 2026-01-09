@@ -457,11 +457,13 @@ export const deleteImageByPath = {
 
 export const getSettings = {
   get: async () => {
-    const threadRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('threadCount') as any
+    const threadRow = db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get('threadCount') as any
     const langRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('language') as any
     const settings: Settings = {
       threadCount: threadRow ? JSON.parse(threadRow.value) : 2,
-      language: langRow ? JSON.parse(langRow.value) : 'en'
+      language: langRow ? JSON.parse(langRow.value) : 'en',
     }
     return settings
   },
@@ -502,7 +504,7 @@ export const createTagGroup = {
     })()
 
     return getAllTagGroups.get()
-  }
+  },
 }
 
 export const updateTagGroup = {
@@ -520,33 +522,37 @@ export const updateTagGroup = {
     })()
 
     return getAllTagGroups.get()
-  }
+  },
 }
 
 export const deleteTagGroup = {
   run: async (pt: { id: number }) => {
     db.prepare('DELETE FROM tag_groups WHERE id = ?').run(pt.id)
     return getAllTagGroups.get()
-  }
+  },
 }
 
 export const getAllTagGroups = {
   get: async () => {
     const groups = db.prepare('SELECT * FROM tag_groups ORDER BY name ASC').all() as any[]
 
-    const groupsWithTags = groups.map(group => {
-      const tags = db.prepare(`
+    const groupsWithTags = groups.map((group) => {
+      const tags = db
+        .prepare(
+          `
         SELECT t.* 
         FROM tags t
         JOIN tag_group_tags tgt ON t.id = tgt.tag_id
         WHERE tgt.group_id = ?
         ORDER BY t.name ASC
-      `).all(group.id) as Tag[]
+      `
+        )
+        .all(group.id) as Tag[]
       return { ...group, tags } as TagGroup
     })
 
     return groupsWithTags
-  }
+  },
 }
 
 export const backfillFileDates = {

@@ -78,12 +78,14 @@ export const ImageViewer = ({
                     e.stopPropagation()
                     onToggleFavorite(tag.id)
                   }}
-                  className={`p-1 rounded-full transition-colors ${tag.is_favorite ? 'bg-amber-400/20' : 'hover:bg-white/10'
-                    }`}
+                  className={`p-1 rounded-full transition-colors ${
+                    tag.is_favorite ? 'bg-amber-400/20' : 'hover:bg-white/10'
+                  }`}
                 >
                   <Star
-                    className={`w-3 h-3 ${tag.is_favorite ? 'text-amber-400 fill-amber-400' : 'text-gray-600'
-                      }`}
+                    className={`w-3 h-3 ${
+                      tag.is_favorite ? 'text-amber-400 fill-amber-400' : 'text-gray-600'
+                    }`}
                   />
                 </div>
               </button>

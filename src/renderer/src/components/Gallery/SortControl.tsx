@@ -56,10 +56,11 @@ export const SortControl = ({ sortKey, sortOrder, onSortChange }: SortControlPro
         <button
           key={key}
           onClick={() => handleKeyChange(key)}
-          className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${sortKey === key
+          className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-all ${
+            sortKey === key
               ? 'bg-indigo-500/20 text-indigo-300 shadow-sm'
               : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
-            }`}
+          }`}
           title={`${t('gallery.sortBy')} ${getLabel(key)}`}
         >
           {getIcon(key)}

@@ -1,88 +1,88 @@
 {
-    "app": {
-        "title": "Tagged",
-        "titleSuffix": "Viewer",
-        "emptyLibrary": "ライブラリは空です",
-        "selectFolder": "スキャンするフォルダを選択"
+  "app": {
+    "title": "Tagged",
+    "titleSuffix": "Viewer",
+    "emptyLibrary": "ライブラリは空です",
+    "selectFolder": "スキャンするフォルダを選択"
+  },
+  "sidebar": {
+    "searchPlaceholder": "タグを検索...",
+    "allImages": "すべての画像",
+    "favorites": "お気に入り",
+    "tags": "タグ",
+    "tagGroups": "タググループ",
+    "noGroups": "グループはありません",
+    "createGroup": "グループを作成",
+    "editGroup": "グループを編集",
+    "settings": "設定",
+    "toggleSort": "並び替え順を切り替え"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "threadCount": "ワーカースレッド数",
+    "performance": "パフォーマンス",
+    "library": "ライブラリ",
+    "rescan": "ライブラリを再スキャン",
+    "rescanDesc": "不足しているファイルを確認して再インデックスします",
+    "clear": "データベースをクリア",
+    "clearDesc": "すべての画像とタグを削除します（元に戻せません）",
+    "version": "バージョン",
+    "updateStatus": {
+      "checking": "アップデートを確認中...",
+      "available": "アップデートが利用可能です",
+      "latest": "最新バージョンです",
+      "error": "確認中にエラーが発生しました",
+      "newVersion": "新しいバージョンが利用可能です: v",
+      "download": "GitHubへ移動して最新のインストーラーをダウンロードしてください。",
+      "getUpdate": "アップデートを入手"
     },
-    "sidebar": {
-        "searchPlaceholder": "タグを検索...",
-        "allImages": "すべての画像",
-        "favorites": "お気に入り",
-        "tags": "タグ",
-        "tagGroups": "タググループ",
-        "noGroups": "グループはありません",
-        "createGroup": "グループを作成",
-        "editGroup": "グループを編集",
-        "settings": "設定",
-        "toggleSort": "並び替え順を切り替え"
-    },
-    "settings": {
-        "title": "設定",
-        "language": "言語",
-        "threadCount": "ワーカースレッド数",
-        "performance": "パフォーマンス",
-        "library": "ライブラリ",
-        "rescan": "ライブラリを再スキャン",
-        "rescanDesc": "不足しているファイルを確認して再インデックスします",
-        "clear": "データベースをクリア",
-        "clearDesc": "すべての画像とタグを削除します（元に戻せません）",
-        "version": "バージョン",
-        "updateStatus": {
-            "checking": "アップデートを確認中...",
-            "available": "アップデートが利用可能です",
-            "latest": "最新バージョンです",
-            "error": "確認中にエラーが発生しました",
-            "newVersion": "新しいバージョンが利用可能です: v",
-            "download": "GitHubへ移動して最新のインストーラーをダウンロードしてください。",
-            "getUpdate": "アップデートを入手"
-        },
-        "checkUpdates": "アップデートを確認",
-        "softwareUpdates": "ソフトウェアアップデート",
-        "softwareUpdatesDesc": "GitHubで最新バージョンを確認します。",
-        "appInfo": "アプリ情報",
-        "threadCountDesc": "同時に解析する画像の数を決定します。値を大きくするとスキャンは速くなりますが、GPU/CPUリソースを多く消費します。",
-        "singleStable": "シングル (安定)",
-        "faster": "高速",
-        "aggressive": "アグレッシブ",
-        "dangerZone": "危険ゾーン",
-        "dangerZoneDesc": "破壊的な操作です。すべてのタグと関連付けをリセットします。"
-    },
-    "viewer": {
-        "fileInfo": "ファイル情報",
-        "showInExplorer": "エクスプローラーで表示",
-        "tags": "タグ"
-    },
-    "gallery": {
-        "loadMore": "もっと読み込む",
-        "endOfLibrary": "ライブラリの最後です",
-        "selected": "選択中",
-        "clearAll": "すべてクリア",
-        "sortBy": "並び替え",
-        "date": "日付",
-        "name": "名前",
-        "ext": "拡張子",
-        "ext": "拡張子",
-        "random": "ランダム",
-        "filters": "フィルタ:",
-        "scanning": "ライブラリをスキャン中"
-    },
-    "common": {
-        "cancel": "キャンセル",
-        "save": "保存",
-        "delete": "削除",
-        "confirmDelete": "本当にこのグループを削除しますか？",
-        "create": "作成",
-        "edit": "編集",
-        "remove": "削除"
-    },
-    "groupModal": {
-        "newTitle": "新規タググループ",
-        "editTitle": "タググループを編集",
-        "nameLabel": "グループ名",
-        "namePlaceholder": "例: キャラクター特徴...",
-        "includeLabel": "含めるタグ",
-        "searchPlaceholder": "追加するタグを検索...",
-        "noTagsFound": "見つかりませんでした: "
-    }
+    "checkUpdates": "アップデートを確認",
+    "softwareUpdates": "ソフトウェアアップデート",
+    "softwareUpdatesDesc": "GitHubで最新バージョンを確認します。",
+    "appInfo": "アプリ情報",
+    "threadCountDesc": "同時に解析する画像の数を決定します。値を大きくするとスキャンは速くなりますが、GPU/CPUリソースを多く消費します。",
+    "singleStable": "シングル (安定)",
+    "faster": "高速",
+    "aggressive": "アグレッシブ",
+    "dangerZone": "危険ゾーン",
+    "dangerZoneDesc": "破壊的な操作です。すべてのタグと関連付けをリセットします。"
+  },
+  "viewer": {
+    "fileInfo": "ファイル情報",
+    "showInExplorer": "エクスプローラーで表示",
+    "tags": "タグ"
+  },
+  "gallery": {
+    "loadMore": "もっと読み込む",
+    "endOfLibrary": "ライブラリの最後です",
+    "selected": "選択中",
+    "clearAll": "すべてクリア",
+    "sortBy": "並び替え",
+    "date": "日付",
+    "name": "名前",
+    "ext": "拡張子",
+    "ext": "拡張子",
+    "random": "ランダム",
+    "filters": "フィルタ:",
+    "scanning": "ライブラリをスキャン中"
+  },
+  "common": {
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "confirmDelete": "本当にこのグループを削除しますか？",
+    "create": "作成",
+    "edit": "編集",
+    "remove": "削除"
+  },
+  "groupModal": {
+    "newTitle": "新規タググループ",
+    "editTitle": "タググループを編集",
+    "nameLabel": "グループ名",
+    "namePlaceholder": "例: キャラクター特徴...",
+    "includeLabel": "含めるタグ",
+    "searchPlaceholder": "追加するタグを検索...",
+    "noTagsFound": "見つかりませんでした: "
+  }
 }

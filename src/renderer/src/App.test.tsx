@@ -20,7 +20,7 @@ Object.defineProperty(window, 'electron', {
 
 // Mock useIpc hook
 vi.mock('./hooks/useIpc', () => ({
-  useIpc: (loadData: () => void) => {
+  useIpc: (_loadData: () => void) => {
     // Call loadData immediately to simulate initial load if needed
     // or expose it
     return {
@@ -37,6 +37,21 @@ vi.mock('./hooks/useIpc', () => ({
       checkForUpdates: vi.fn(),
     }
   },
+}))
+
+// Mock react-i18next
+const mockChangeLanguage = vi.fn()
+const mockI18n = {
+  changeLanguage: mockChangeLanguage,
+  language: 'en',
+}
+const mockT = (key: string) => key
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: mockT,
+    i18n: mockI18n,
+  }),
 }))
 
 describe('App', () => {
@@ -56,6 +71,8 @@ describe('App', () => {
           return Promise.resolve([])
         case 'db:getTags':
           return Promise.resolve([])
+        case 'db:getTagGroups':
+          return Promise.resolve([])
         default:
           return Promise.resolve(null)
       }
@@ -66,7 +83,7 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Your library is empty/i)).toBeInTheDocument()
+      expect(screen.getByText('app.emptyLibrary')).toBeInTheDocument()
     })
   })
 })

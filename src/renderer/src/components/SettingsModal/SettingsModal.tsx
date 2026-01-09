@@ -122,9 +122,7 @@ export const SettingsModal = ({
                 <RefreshCw className="w-4 h-4" />
                 {t('settings.rescan')}
               </button>
-              <p className="text-[10px] text-gray-500 px-1">
-                {t('settings.rescanDesc')}
-              </p>
+              <p className="text-[10px] text-gray-500 px-1">{t('settings.rescanDesc')}</p>
             </div>
 
             <div className="pt-2 space-y-2">
@@ -133,9 +131,7 @@ export const SettingsModal = ({
                   <AlertTriangle className="w-3 h-3" />
                   {t('settings.dangerZone')}
                 </p>
-                <p className="text-[9px] text-red-500/70 mt-0.5">
-                  {t('settings.dangerZoneDesc')}
-                </p>
+                <p className="text-[9px] text-red-500/70 mt-0.5">{t('settings.dangerZoneDesc')}</p>
               </div>
               <button
                 onClick={onClear}
@@ -158,7 +154,9 @@ export const SettingsModal = ({
             <div className="bg-gray-950/50 rounded-xl border border-gray-800 overflow-hidden">
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-300 font-medium">{t('settings.softwareUpdates')}</p>
+                  <p className="text-sm text-gray-300 font-medium">
+                    {t('settings.softwareUpdates')}
+                  </p>
                   <p className="text-[10px] text-gray-500 mt-0.5">
                     {t('settings.softwareUpdatesDesc')}
                   </p>
@@ -183,7 +181,8 @@ export const SettingsModal = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-indigo-300 font-bold">
-                      {t('settings.updateStatus.newVersion')}{updateStatus.info?.version}
+                      {t('settings.updateStatus.newVersion')}
+                      {updateStatus.info?.version}
                     </p>
                     <p className="text-[9px] text-indigo-400/70 truncate">
                       {t('settings.updateStatus.download')}

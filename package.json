@@ -10,10 +10,10 @@
     "dist": "npm run build && electron-builder --win --publish never",
     "postinstall": "electron-builder install-app-deps",
     "test": "npm run lint && vitest run",
-    "test:unit": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:unit": "npm run lint && vitest run",
+    "test:coverage": "npm run lint && vitest run --coverage",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run lint && playwright test",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write ."
   },

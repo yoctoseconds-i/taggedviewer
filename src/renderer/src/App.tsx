@@ -142,7 +142,7 @@ function App(): JSX.Element {
       loadTagGroups()
     }
     init()
-  }, [setIsScanning, loadData, loadTagGroups])
+  }, [setIsScanning, loadData, loadTagGroups, i18n])
 
   useEffect(() => {
     setImages([])
@@ -249,7 +249,6 @@ function App(): JSX.Element {
         tags={filteredTags}
         activeTags={selectedTags}
         onTagClick={handleTagClick}
-        tagSort={tagSort}
         onToggleSort={() => setTagSort((prev) => (prev === 'name' ? 'count' : 'name'))}
         onOpenSettings={() => setShowSettings(true)}
         tagSearchTerm={tagSearchTerm}
@@ -341,9 +340,7 @@ function App(): JSX.Element {
         groupToEdit={groupToEdit}
         availableTags={tags}
         initialTags={
-          groupToEdit
-            ? groupToEdit.tags
-            : tags.filter(t => selectedTags.includes(t.name))
+          groupToEdit ? groupToEdit.tags : tags.filter((t) => selectedTags.includes(t.name))
         }
         onSave={handleSaveGroup}
         onDelete={handleDeleteGroup}

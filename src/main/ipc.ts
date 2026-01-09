@@ -179,13 +179,19 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   // Tag Groups
-  ipcMain.handle('db:createTagGroup', async (_, { name, tagIds }: { name: string; tagIds: number[] }) => {
-    return await createTagGroup.run({ name, tagIds })
-  })
+  ipcMain.handle(
+    'db:createTagGroup',
+    async (_, { name, tagIds }: { name: string; tagIds: number[] }) => {
+      return await createTagGroup.run({ name, tagIds })
+    }
+  )
 
-  ipcMain.handle('db:updateTagGroup', async (_, { id, name, tagIds }: { id: number; name: string; tagIds: number[] }) => {
-    return await updateTagGroup.run({ id, name, tagIds })
-  })
+  ipcMain.handle(
+    'db:updateTagGroup',
+    async (_, { id, name, tagIds }: { id: number; name: string; tagIds: number[] }) => {
+      return await updateTagGroup.run({ id, name, tagIds })
+    }
+  )
 
   ipcMain.handle('db:deleteTagGroup', async (_, { id }: { id: number }) => {
     return await deleteTagGroup.run({ id })

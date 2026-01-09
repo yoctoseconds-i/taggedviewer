@@ -3,8 +3,6 @@ import { Image as ImageType } from '../../types'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { forwardRef } from 'react'
 
-import { useTranslation } from 'react-i18next'
-
 interface ImageGridProps {
   images: ImageType[]
   onImageClick: (index: number) => void
@@ -30,7 +28,6 @@ const ItemContainer = ({ children, ...props }: any) => (
 )
 
 export const ImageGrid = ({ images, onImageClick, loadMore, hasMore }: ImageGridProps) => {
-  const { t } = useTranslation()
   if (images.length === 0) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center text-gray-600 space-y-4 animate-in fade-in zoom-in duration-500">
