@@ -2,8 +2,6 @@ import { app, shell, BrowserWindow, protocol, net } from 'electron'
 import { join, normalize } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIPC } from './ipc'
-import { backfillFileDates, syncLibrary } from './db'
-import { processQueue } from './services/QueueService'
 import { pathToFileURL } from 'url'
 import { existsSync } from 'fs'
 import { autoUpdater } from 'electron-updater'
@@ -26,26 +24,6 @@ export function startMainApp() {
     })
 
     setupIPC(mainWindow)
-
-    // Auto-maintenance: Backfill file dates for existing images if needed
-    setTimeout(async () => {
-      console.log('[Main] Starting background maintenance')
-      try {
-        const resDate = await backfillFileDates.run()
-        if (resDate.count > 0) console.log(`[Main] Backfilled dates for ${resDate.count} images`)
-
-        console.log('[Main] Running library auto-sync...')
-        const syncRes = await syncLibrary.run(mainWindow)
-        console.log(`[Main] Auto-sync: added ${syncRes.added}, removed ${syncRes.removed}`)
-
-        if (syncRes.added > 0) {
-          console.log('[Main] New files found, starting processing queue...')
-          processQueue(mainWindow)
-        }
-      } catch (err) {
-        console.error('[Main] Maintenance failed', err)
-      }
-    }, 5000)
 
     autoUpdater.on('update-available', (info) => {
       mainWindow.webContents.send('app:update-available', info)

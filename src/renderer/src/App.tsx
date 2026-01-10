@@ -118,6 +118,7 @@ function App(): JSX.Element {
     showItemInFolder,
     clearLibrary,
     rescanLibrary,
+    syncLibrary,
     version,
     updateStatus,
     checkForUpdates,
@@ -329,6 +330,7 @@ function App(): JSX.Element {
         onUpdateThreadCount={handleUpdateThreadCount}
         onUpdateLanguage={handleUpdateLanguage}
         onRescan={rescanLibrary}
+        onSync={syncLibrary}
         onClear={clearLibrary}
         version={version}
         updateStatus={updateStatus}

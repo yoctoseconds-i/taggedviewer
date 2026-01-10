@@ -19,6 +19,7 @@ interface SettingsModalProps {
   onUpdateThreadCount: (count: number) => void
   onUpdateLanguage: (lang: string) => void
   onRescan: () => void
+  onSync: () => void
   onClear: () => void
   version?: string
   updateStatus?: { available: boolean; info?: any; checking: boolean }
@@ -33,6 +34,7 @@ export const SettingsModal = ({
   onUpdateThreadCount,
   onUpdateLanguage,
   onRescan,
+  onSync,
   onClear,
   version,
   updateStatus,
@@ -153,6 +155,15 @@ export const SettingsModal = ({
                 {t('settings.rescan')}
               </button>
               <p className="text-[10px] text-gray-500 px-1">{t('settings.rescanDesc')}</p>
+
+              <button
+                onClick={onSync}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {t('settings.sync')}
+              </button>
+              <p className="text-[10px] text-gray-500 px-1">{t('settings.syncDesc')}</p>
             </div>
 
             <div className="pt-2 space-y-2">

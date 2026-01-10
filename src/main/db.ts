@@ -566,7 +566,7 @@ export const getAllTagGroups = {
 }
 
 export const syncLibrary = {
-  run: async (mainWindow?: any) => {
+  run: async (mainWindow?: any, options: { skipScan?: boolean; skipCleanup?: boolean } = {}) => {
     const settings = await getSettings.get()
     const libPath = settings.libraryPath
     if (!libPath || !existsSync(libPath)) {
@@ -574,9 +574,14 @@ export const syncLibrary = {
       return { added: 0, removed: 0 }
     }
 
-    console.log(`[DB] Starting library sync for: ${libPath}`)
-    const files = await scanDirectory(libPath)
-    const filePaths = new Set(files.map((f: any) => f.path))
+    let files: any[] = []
+    let filePaths = new Set<string>()
+
+    if (!options.skipScan) {
+      console.log(`[DB] Starting library sync for: ${libPath}`)
+      files = await scanDirectory(libPath)
+      filePaths = new Set(files.map((f: any) => f.path))
+    }
 
     let addedCount = 0
     let removedCount = 0
@@ -609,13 +614,26 @@ export const syncLibrary = {
       await new Promise((resolve) => setImmediate(resolve))
     }
 
+    if (options.skipCleanup) {
+      console.log(`[DB] Library sync (partial) completed. Added: ${addedCount}`)
+      return { added: addedCount, removed: 0 }
+    }
+
     // 2. Remove missing files from DB that should be in libraryPath
     // Optimization: Only query images that start with libPath
     const escapeLike = (str: string) => str.replace(/[%_]/g, '\\$&')
     const pattern = escapeLike(libPath) + '%'
     const imagesInScope = db
-      .prepare('SELECT id, filepath FROM images WHERE filepath LIKE ? ESCAPE "\\"')
+      .prepare("SELECT id, filepath FROM images WHERE filepath LIKE ? ESCAPE '\\'")
       .all(pattern) as Image[]
+
+    // If skipScan was true, we don't have filePaths set.
+    // If we want to cleanup WITHOUT scanning for NEW files, we still need the current folder state to know what's REMOVED.
+    if (options.skipScan) {
+      console.log(`[DB] Scanning directory for cleanup: ${libPath}`)
+      files = await scanDirectory(libPath)
+      filePaths = new Set(files.map((f: any) => f.path))
+    }
 
     const toDelete: string[] = []
     for (const img of imagesInScope) {

@@ -142,8 +142,12 @@ export function setupIPC(mainWindow: BrowserWindow) {
     return { success: true, removedCount: res.removed, addedCount: res.added }
   })
 
-  ipcMain.handle('lib:sync', async () => {
-    return await syncLibrary.run(mainWindow)
+  ipcMain.handle('lib:sync', async (_, options?: { skipScan?: boolean; skipCleanup?: boolean }) => {
+    return await syncLibrary.run(mainWindow, options)
+  })
+
+  ipcMain.handle('lib:cleanup', async () => {
+    return await syncLibrary.run(mainWindow, { skipScan: true, skipCleanup: false })
   })
 
   ipcMain.handle('app:getVersion', () => {

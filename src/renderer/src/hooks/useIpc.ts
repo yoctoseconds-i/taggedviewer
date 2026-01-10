@@ -98,6 +98,15 @@ export const useIpc = (loadData: () => void) => {
     setIsScanning(true)
     // @ts-ignore
     await window.electron.ipcRenderer.invoke('lib:rescan')
+    setIsScanning(false)
+    loadData()
+  }
+
+  const syncLibrary = async () => {
+    setIsScanning(true)
+    // @ts-ignore
+    await window.electron.ipcRenderer.invoke('lib:sync')
+    setIsScanning(false)
     loadData()
   }
 
@@ -124,10 +133,11 @@ export const useIpc = (loadData: () => void) => {
     toggleFavorite,
     showItemInFolder,
     clearLibrary,
-    rescanLibrary,
-    version,
-    updateStatus,
     checkForUpdates,
     setLibraryPath,
+    syncLibrary,
+    version,
+    updateStatus,
+    rescanLibrary,
   }
 }
