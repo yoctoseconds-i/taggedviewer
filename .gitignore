@@ -8,3 +8,9 @@ dist
 test_models
 testimage
 db.json
+coverage/
+playwright-report/
+test-results/
+lint_errors.txt
+*.sqlite
+*.sqlite-journal
