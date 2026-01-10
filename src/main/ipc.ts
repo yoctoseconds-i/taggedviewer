@@ -55,6 +55,8 @@ export function setupIPC(mainWindow: BrowserWindow) {
         total: files.length,
         current: Math.min(i + batch.length, files.length),
       })
+      // Yield to event loop
+      await new Promise((resolve) => setImmediate(resolve))
     }
 
     // Phase 2: Processing Queue

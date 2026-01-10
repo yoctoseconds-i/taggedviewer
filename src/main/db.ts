@@ -653,19 +653,25 @@ export const backfillFileDates = {
     const updateStmt = db.prepare('UPDATE images SET file_modified_at = ? WHERE id = ?')
     let updated = 0
 
-    db.transaction(() => {
-      for (const img of images) {
-        try {
-          if (existsSync(img.filepath)) {
-            const stats = statSync(img.filepath)
-            updateStmt.run(stats.mtime.toISOString(), img.id)
-            updated++
+    const BATCH_SIZE = 100
+    for (let i = 0; i < images.length; i += BATCH_SIZE) {
+      const batch = images.slice(i, i + BATCH_SIZE)
+      db.transaction(() => {
+        for (const img of batch) {
+          try {
+            if (existsSync(img.filepath)) {
+              const stats = statSync(img.filepath)
+              updateStmt.run(stats.mtime.toISOString(), img.id)
+              updated++
+            }
+          } catch {
+            // ignore missing files
           }
-        } catch {
-          // ignore missing files
         }
-      }
-    })()
+      })()
+      // Yield to event loop
+      await new Promise((resolve) => setImmediate(resolve))
+    }
     return { count: updated }
   },
 }
