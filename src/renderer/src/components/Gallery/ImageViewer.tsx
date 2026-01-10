@@ -76,6 +76,8 @@ export const ImageViewer = ({
           className={`fixed left-4 top-1/2 -translate-y-1/2 z-[60] p-4 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all duration-300 ${
             isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
+          aria-label="Previous image"
+          title={t('viewer.prev')}
         >
           <ChevronLeft className="w-8 h-8" />
         </button>
@@ -90,6 +92,8 @@ export const ImageViewer = ({
           className={`fixed right-4 top-1/2 -translate-y-1/2 z-[60] p-4 bg-black/20 hover:bg-black/40 text-white rounded-full transition-all duration-300 ${
             isControlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
           } ${isDetailVisible ? 'mr-80' : ''}`}
+          aria-label="Next image"
+          title={t('viewer.next')}
         >
           <ChevronRight className="w-8 h-8" />
         </button>
@@ -114,6 +118,8 @@ export const ImageViewer = ({
           className={`absolute top-6 left-6 p-2 bg-gray-900/50 hover:bg-gray-800 border border-gray-800 rounded-full text-white transition-all hover:rotate-90 active:scale-95 z-[60] ${
             isControlsVisible ? 'opacity-100' : 'opacity-0'
           }`}
+          aria-label="Close viewer"
+          title={t('viewer.close')}
         >
           <X className="w-6 h-6" />
         </button>
@@ -128,6 +134,8 @@ export const ImageViewer = ({
             className={`absolute bottom-6 right-6 p-3 bg-indigo-600/50 hover:bg-indigo-600 text-white rounded-full transition-all z-[60] ${
               isControlsVisible ? 'opacity-100' : 'opacity-0'
             }`}
+            aria-label="Show info"
+            title={t('viewer.fileInfo')}
           >
             <Info className="w-6 h-6" />
           </button>

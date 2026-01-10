@@ -10,6 +10,7 @@ describe('MetadataService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(fs, 'readFileSync').mockReturnValue(Buffer.from(''))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   it('should return null if sharp fails', async () => {

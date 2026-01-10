@@ -1,7 +1,25 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { spawn } from 'child_process'
+
+vi.mock('better-sqlite3', () => {
+  return {
+    default: vi.fn().mockImplementation(function () {
+      return {
+        pragma: vi.fn(),
+        function: vi.fn(),
+        prepare: vi.fn().mockReturnValue({
+          all: vi.fn().mockReturnValue([]),
+          get: vi.fn().mockReturnValue(null), // Return null to trigger fallbacks
+          run: vi.fn().mockReturnValue({ lastInsertRowid: 1, changes: 0 }),
+        }),
+        exec: vi.fn(),
+        transaction: vi.fn().mockImplementation((cb: any) => cb()),
+      }
+    }),
+  }
+})
 
 describe('Build Integrity & Runtime Check', () => {
   const projectRoot = join(__dirname, '..', '..')
