@@ -8,6 +8,7 @@ import {
   Languages,
   FolderOpen,
   FolderSync,
+  Github,
 } from 'lucide-react'
 import { Settings } from '../../types'
 import { useTranslation } from 'react-i18next'
@@ -105,6 +106,21 @@ export const SettingsModal = ({
               onChange={(e) => onUpdateThreadCount(parseInt(e.target.value))}
               className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
             />
+            {(window.electron as any).shell ? (
+              <div className="flex justify-between items-center bg-zinc-800/50 p-4 rounded-lg border border-zinc-700">
+                <div>
+                  <p className="text-zinc-200 font-medium">{t('settings.github')}</p>
+                  <p className="text-zinc-400 text-sm">{t('settings.githubDesc')}</p>
+                </div>
+                <button
+                  onClick={() => (window.electron as any).shell.openExternal('https://github.com/rshkkngtm08/taggedviewer')}
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors border border-zinc-600"
+                >
+                  <Github size={18} />
+                  GitHub
+                </button>
+              </div>
+            ) : null}
             <div className="flex justify-between text-[10px] text-gray-500 font-medium">
               <span>{t('settings.singleStable')}</span>
               <span>{t('settings.faster')}</span>
@@ -231,7 +247,7 @@ export const SettingsModal = ({
                   </div>
                   <button
                     onClick={() =>
-                      window.electron.shell.openExternal(
+                      (window.electron as any).shell.openExternal(
                         'https://github.com/rshkkngtm08/taggedviewer/releases'
                       )
                     }

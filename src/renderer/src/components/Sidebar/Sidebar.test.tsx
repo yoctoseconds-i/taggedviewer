@@ -12,8 +12,8 @@ vi.mock('react-i18next', () => ({
 describe('Sidebar', () => {
   const defaultProps = {
     tags: [
-      { id: 1, name: 'tag1', count: 10, is_favorite: 1 },
-      { id: 2, name: 'tag2', count: 5, is_favorite: 0 },
+      { id: 1, name: 'tag1', count: 10, is_favorite: true },
+      { id: 2, name: 'tag2', count: 5, is_favorite: false },
     ],
     activeTags: [],
     onTagClick: vi.fn(),
@@ -23,6 +23,10 @@ describe('Sidebar', () => {
     tagSearchTerm: '',
     onSearchChange: vi.fn(),
     onToggleFavorite: vi.fn(),
+    onUpdateLanguage: vi.fn(),
+    onSync: vi.fn(),
+    onSelectLibrary: vi.fn(),
+    onClearDatabase: vi.fn(),
     tagGroups: [],
     onGroupClick: vi.fn(),
     onCreateGroup: vi.fn(),

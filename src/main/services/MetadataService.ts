@@ -9,9 +9,10 @@ export interface ImageMetadata {
 export async function getImageMetadata(filepath: string): Promise<ImageMetadata | null> {
   try {
     const metadata = await sharp(filepath).metadata()
+    const text = (metadata as any).text || {}
 
     const result: ImageMetadata = {
-      text: metadata.text || {},
+      text: text,
     }
 
     // If it's a PNG, manually parse chunks to find tEXt/iTXt
