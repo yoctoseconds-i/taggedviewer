@@ -1,7 +1,8 @@
 import { join } from 'path'
 import { app } from 'electron'
-import { existsSync, readFileSync, renameSync } from 'fs'
+import { existsSync, readFileSync, renameSync, statSync } from 'fs'
 const Database = require('better-sqlite3')
+import { scanDirectory } from './scanner'
 
 export interface Image {
   id: number
@@ -34,6 +35,7 @@ export interface ImageTag {
 export interface Settings {
   threadCount: number
   language?: string
+  libraryPath?: string
 }
 
 const dbPath = join(app.getPath('userData'), 'taggedviewer-db-v2.sqlite')
@@ -461,9 +463,11 @@ export const getSettings = {
       .prepare('SELECT value FROM settings WHERE key = ?')
       .get('threadCount') as any
     const langRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('language') as any
+    const libRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('libraryPath') as any
     const settings: Settings = {
       threadCount: threadRow ? JSON.parse(threadRow.value) : 2,
       language: langRow ? JSON.parse(langRow.value) : 'en',
+      libraryPath: libRow ? JSON.parse(libRow.value) : undefined,
     }
     return settings
   },
@@ -481,6 +485,12 @@ export const updateSettings = {
       db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
         'language',
         JSON.stringify(settings.language)
+      )
+    }
+    if (settings.libraryPath !== undefined) {
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
+        'libraryPath',
+        JSON.stringify(settings.libraryPath)
       )
     }
     return getSettings.get()
@@ -555,6 +565,84 @@ export const getAllTagGroups = {
   },
 }
 
+export const syncLibrary = {
+  run: async (mainWindow?: any) => {
+    const settings = await getSettings.get()
+    const libPath = settings.libraryPath
+    if (!libPath || !existsSync(libPath)) {
+      console.log('[DB] Library sync skipped: libraryPath not set or invalid.')
+      return { added: 0, removed: 0 }
+    }
+
+    console.log(`[DB] Starting library sync for: ${libPath}`)
+    const files = await scanDirectory(libPath)
+    const filePaths = new Set(files.map((f: any) => f.path))
+
+    let addedCount = 0
+    let removedCount = 0
+
+    // 1. Find and add new files
+    const BATCH_SIZE = 100
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      if (mainWindow && mainWindow.isDestroyed()) break
+      const batch = files.slice(i, i + BATCH_SIZE)
+      const batchPaths = batch.map((f: any) => f.path)
+      const mtimes = batch.reduce(
+        (acc: any, f: any) => {
+          acc[f.path] = f.mtime.toISOString()
+          return acc
+        },
+        {} as Record<string, string>
+      )
+
+      const results = await insertImagesBulk.run(batchPaths, mtimes)
+      addedCount += results.filter((r) => r.inserted).length
+
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('scan:progress', {
+          total: files.length,
+          current: Math.min(i + batch.length, files.length),
+        })
+      }
+
+      // Yield to event loop to keep UI responsive
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+
+    // 2. Remove missing files from DB that should be in libraryPath
+    // Optimization: Only query images that start with libPath
+    const escapeLike = (str: string) => str.replace(/[%_]/g, '\\$&')
+    const pattern = escapeLike(libPath) + '%'
+    const imagesInScope = db
+      .prepare('SELECT id, filepath FROM images WHERE filepath LIKE ? ESCAPE "\\"')
+      .all(pattern) as Image[]
+
+    const toDelete: string[] = []
+    for (const img of imagesInScope) {
+      if (!filePaths.has(img.filepath)) {
+        toDelete.push(img.filepath)
+      }
+    }
+
+    if (toDelete.length > 0) {
+      console.log(`[DB] Sync: Removing ${toDelete.length} missing files in scope.`)
+      for (let i = 0; i < toDelete.length; i++) {
+        if (mainWindow && mainWindow.isDestroyed()) break
+        await deleteImageByPath.run({ filepath: toDelete[i] })
+        removedCount++
+
+        // Yield occasionally
+        if (i % 50 === 0) {
+          await new Promise((resolve) => setImmediate(resolve))
+        }
+      }
+    }
+
+    console.log(`[DB] Library sync completed. Added: ${addedCount}, Removed: ${removedCount}`)
+    return { added: addedCount, removed: removedCount }
+  },
+}
+
 export const backfillFileDates = {
   run: async () => {
     const images = db
@@ -568,13 +656,8 @@ export const backfillFileDates = {
     db.transaction(() => {
       for (const img of images) {
         try {
-          // Need fs to be available here, or pass it in. db.ts imports fs constants but not statSync easily without modifying imports
-          // Actually imports are at top: import { existsSync, readFileSync, renameSync } from 'fs'
-          // Let's rely on the caller or just import statSync here.
-          // Since we are in node, we can require 'fs'.
-          const fs = require('fs')
-          if (fs.existsSync(img.filepath)) {
-            const stats = fs.statSync(img.filepath)
+          if (existsSync(img.filepath)) {
+            const stats = statSync(img.filepath)
             updateStmt.run(stats.mtime.toISOString(), img.id)
             updated++
           }

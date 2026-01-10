@@ -101,6 +101,21 @@ export const useIpc = (loadData: () => void) => {
     loadData()
   }
 
+  const setLibraryPath = async () => {
+    // @ts-ignore
+    const dir = await window.electron.ipcRenderer.invoke('dialog:openDirectory')
+    if (dir) {
+      // @ts-ignore
+      const currentSettings = await window.electron.ipcRenderer.invoke('settings:get')
+      const newSettings = { ...currentSettings, libraryPath: dir }
+      // @ts-ignore
+      await window.electron.ipcRenderer.invoke('settings:set', newSettings)
+      loadData()
+      return newSettings
+    }
+    return null
+  }
+
   return {
     isScanning,
     setIsScanning,
@@ -113,5 +128,6 @@ export const useIpc = (loadData: () => void) => {
     version,
     updateStatus,
     checkForUpdates,
+    setLibraryPath,
   }
 }

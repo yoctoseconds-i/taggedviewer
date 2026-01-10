@@ -121,6 +121,7 @@ function App(): JSX.Element {
     version,
     updateStatus,
     checkForUpdates,
+    setLibraryPath,
   } = useIpc(async () => loadData(true, 0))
 
   useEffect(() => {
@@ -332,6 +333,10 @@ function App(): JSX.Element {
         version={version}
         updateStatus={updateStatus}
         onCheckForUpdates={checkForUpdates}
+        onSelectLibrary={async () => {
+          const newSettings = await setLibraryPath()
+          if (newSettings) setSettings(newSettings)
+        }}
       />
 
       <TagGroupModal

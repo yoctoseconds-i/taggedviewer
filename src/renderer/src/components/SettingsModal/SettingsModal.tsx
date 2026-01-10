@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   Download,
   Languages,
+  FolderOpen,
+  FolderSync,
 } from 'lucide-react'
 import { Settings } from '../../types'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +23,7 @@ interface SettingsModalProps {
   version?: string
   updateStatus?: { available: boolean; info?: any; checking: boolean }
   onCheckForUpdates?: () => void
+  onSelectLibrary: () => void
 }
 
 export const SettingsModal = ({
@@ -34,6 +37,7 @@ export const SettingsModal = ({
   version,
   updateStatus,
   onCheckForUpdates,
+  onSelectLibrary,
 }: SettingsModalProps) => {
   const { t, i18n } = useTranslation()
   if (!show) return null
@@ -114,7 +118,33 @@ export const SettingsModal = ({
           <div className="space-y-4">
             <label className="text-sm font-semibold text-gray-300">{t('settings.library')}</label>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
+              <div className="bg-gray-950/50 p-4 rounded-xl border border-gray-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                    <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
+                    {t('settings.libraryPath')}
+                  </div>
+                  <button
+                    onClick={onSelectLibrary}
+                    className="px-2 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold rounded border border-indigo-500/20 transition-all"
+                  >
+                    {t('settings.setLibrary')}
+                  </button>
+                </div>
+                <div className="px-3 py-2 bg-black/40 rounded-lg border border-gray-800/50">
+                  <p className="text-[10px] text-gray-400 font-mono break-all line-clamp-2">
+                    {settings.libraryPath || 'No directory selected'}
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <FolderSync className="w-3 h-3 text-indigo-500/50 mt-0.5" />
+                  <p className="text-[9px] text-gray-500 leading-tight">
+                    {t('settings.autoSyncDesc')}
+                  </p>
+                </div>
+              </div>
+
               <button
                 onClick={onRescan}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"

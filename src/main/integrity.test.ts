@@ -118,4 +118,12 @@ describe('Build Integrity & Runtime Check', () => {
     const wd14 = await import('./wd14')
     expect(wd14.tagImageWD14).toBeDefined()
   })
+
+  it('should be able to import and call syncLibrary without MODULE_NOT_FOUND', async () => {
+    const db = await import('./db')
+    expect(db.syncLibrary).toBeDefined()
+    // It should skip if no directory is set, but not throw MODULE_NOT_FOUND
+    const result = await db.syncLibrary.run()
+    expect(result).toBeDefined()
+  })
 })

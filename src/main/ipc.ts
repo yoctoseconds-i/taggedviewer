@@ -1,6 +1,5 @@
 import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import * as fs from 'fs'
 import { scanDirectory } from './scanner'
 import {
   insertImagesBulk,
@@ -12,12 +11,9 @@ import {
   getTagsForImage,
   getSettings,
   updateSettings,
-  deleteImageByPath,
-  backfillFileDates,
-  createTagGroup,
-  updateTagGroup,
   deleteTagGroup,
   getAllTagGroups,
+  syncLibrary,
 } from './db'
 import { processQueue, setTargetThreads } from './services/QueueService'
 
@@ -37,7 +33,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('scan:start', async (_, dirPath: string) => {
     console.log(`Starting scan for ${dirPath}`)
-    const files = scanDirectory(dirPath)
+    const files = await scanDirectory(dirPath)
 
     // Phase 1: Registration (Bulk)
     const BATCH_SIZE = 100
@@ -137,22 +133,15 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('lib:rescan', async () => {
-    const images = await getAllImages.all()
-    console.log(`[IPC] Rescanning library: ${images.length} images in DB`)
-
-    let removed = 0
-    for (const img of images) {
-      if (!fs.existsSync(img.filepath)) {
-        await deleteImageByPath.run({ filepath: img.filepath })
-        removed++
-      }
-    }
-    console.log(`[IPC] Rescan: removed ${removed} missing images.`)
-
+    const res = await syncLibrary.run(mainWindow)
     await resetProcessed.run()
     // Start processing queue in background
     processQueue(mainWindow)
-    return { success: true, removedCount: removed }
+    return { success: true, removedCount: res.removed, addedCount: res.added }
+  })
+
+  ipcMain.handle('lib:sync', async () => {
+    return await syncLibrary.run(mainWindow)
   })
 
   ipcMain.handle('app:getVersion', () => {
