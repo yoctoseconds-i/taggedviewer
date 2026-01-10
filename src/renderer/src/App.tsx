@@ -245,6 +245,26 @@ function App(): JSX.Element {
     loadTagGroups()
   }
 
+  const handlePrev = useCallback(() => {
+    setSelectedImageIndex((prev) => {
+      if (prev === null) return null
+      return prev > 0 ? prev - 1 : prev
+    })
+  }, [])
+
+  const handleNext = useCallback(() => {
+    setSelectedImageIndex((prev) => {
+      if (prev === null) return null
+      if (prev >= images.length - 1) {
+        if (hasMore) {
+          loadData(false, images.length)
+        }
+        return prev
+      }
+      return prev + 1
+    })
+  }, [images.length, hasMore, loadData])
+
   return (
     <div className="flex h-screen bg-black text-gray-100 overflow-hidden font-sans selection:bg-indigo-500/30">
       <Sidebar
@@ -319,6 +339,8 @@ function App(): JSX.Element {
               setSelectedTags([name])
               setSelectedImageIndex(null)
             }}
+            onPrev={selectedImageIndex > 0 ? handlePrev : undefined}
+            onNext={selectedImageIndex < images.length - 1 || hasMore ? handleNext : undefined}
           />
         )}
       </main>

@@ -195,4 +195,9 @@ export function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('db:getTagGroups', async () => {
     return await getAllTagGroups.get()
   })
+
+  ipcMain.handle('image:getMetadata', async (_, filepath: string) => {
+    const { getImageMetadata } = await import('./services/MetadataService')
+    return await getImageMetadata(filepath)
+  })
 }

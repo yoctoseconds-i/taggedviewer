@@ -1,0 +1,24 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mF:/codes/antigravity/taggedviewer[39m
+
+stderr | src/main/services/MetadataService.test.ts > MetadataService > should return null if sharp fails
+[MetadataService] Failed to get metadata Error: Failed
+    at F:/codes/antigravity/taggedviewer/src/main/services/MetadataService.test.ts:17:49
+    at file:///F:/codes/antigravity/taggedviewer/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///F:/codes/antigravity/taggedviewer/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///F:/codes/antigravity/taggedviewer/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///F:/codes/antigravity/taggedviewer/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///F:/codes/antigravity/taggedviewer/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///F:/codes/antigravity/taggedviewer/node_modules/vitest/dist/chunks/traces.U4xDYhzZ.js:115:27)
+    at trace (file:///F:/codes/antigravity/taggedviewer/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///F:/codes/antigravity/taggedviewer/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+ [32m笨・[39m src/main/services/MetadataService.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 02:55:20
+[2m   Duration [22m 2.68s[2m (transform 60ms, setup 214ms, import 120ms, tests 8ms, environment 1.46s)[22m
+

@@ -57,7 +57,11 @@
   "viewer": {
     "fileInfo": "File Information",
     "showInExplorer": "Show in Explorer",
-    "tags": "Tags"
+    "tags": "Tags",
+    "showPrompt": "Show Prompt",
+    "promptTitle": "Generation Prompt",
+    "noPrompt": "No prompt metadata found",
+    "close": "Close"
   },
   "gallery": {
     "loadMore": "Load More",

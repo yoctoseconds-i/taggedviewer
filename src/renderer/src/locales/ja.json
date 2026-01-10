@@ -57,7 +57,11 @@
   "viewer": {
     "fileInfo": "ファイル情報",
     "showInExplorer": "エクスプローラーで表示",
-    "tags": "タグ"
+    "tags": "タグ",
+    "showPrompt": "プロンプトを表示",
+    "promptTitle": "生成プロンプト",
+    "noPrompt": "プロンプト情報が見つかりませんでした",
+    "close": "閉じる"
   },
   "gallery": {
     "loadMore": "もっと読み込む",

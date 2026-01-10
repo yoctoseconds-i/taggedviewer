@@ -38,9 +38,24 @@ export interface Settings {
   libraryPath?: string
 }
 
-const dbPath = join(app.getPath('userData'), 'taggedviewer-db-v2.sqlite')
-const oldDbPath = join(app.getPath('userData'), 'taggedviewer-db.json')
+const getUserDataPath = () => {
+  try {
+    return app.getPath('userData')
+  } catch {
+    // Fallback for tests or non-electron environments
+    return join(process.cwd(), 'out', 'test-user-data')
+  }
+}
+
+const dbPath = join(getUserDataPath(), 'taggedviewer-db-v2.sqlite')
+const oldDbPath = join(getUserDataPath(), 'taggedviewer-db.json')
 const db = new Database(dbPath)
+
+// Performance Optimizations
+db.pragma('journal_mode = WAL')
+db.pragma('synchronous = NORMAL')
+db.pragma('temp_store = MEMORY')
+db.pragma('cache_size = -64000') // 64MB cache
 
 // Custom function to get file extension
 db.function('GetExtension', (filepath: string) => {
@@ -98,6 +113,9 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_images_scanned_at ON images(scanned_at DESC);
   CREATE INDEX IF NOT EXISTS idx_image_tags_tag_id ON image_tags(tag_id);
+  CREATE INDEX IF NOT EXISTS idx_image_tags_composite ON image_tags(tag_id, image_id);
+  CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+  
   CREATE TABLE IF NOT EXISTS tag_groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE
