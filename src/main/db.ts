@@ -18,6 +18,7 @@ export interface Tag {
   name: string
   count?: number
   is_favorite?: boolean
+  is_hidden?: boolean
 }
 
 export interface TagGroup {
@@ -94,7 +95,8 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE,
-    is_favorite INTEGER DEFAULT 0
+    is_favorite INTEGER DEFAULT 0,
+    is_hidden INTEGER DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS image_tags (
@@ -144,9 +146,11 @@ if (existsSync(oldDbPath)) {
       }
 
       // Import tags
-      const insertTag = db.prepare('INSERT OR IGNORE INTO tags (name, is_favorite) VALUES (?, ?)')
+      const insertTag = db.prepare(
+        'INSERT OR IGNORE INTO tags (name, is_favorite, is_hidden) VALUES (?, ?, ?)'
+      )
       for (const tag of data.tags || []) {
-        insertTag.run(tag.name, tag.is_favorite ? 1 : 0)
+        insertTag.run(tag.name, tag.is_favorite ? 1 : 0, tag.is_hidden ? 1 : 0)
       }
 
       // Import links
@@ -205,7 +209,19 @@ try {
     ).run()
   }
 } catch (e) {
-  console.error('[DB] Schema migration failed', e)
+  console.error('[DB] Schema migration failed (images)', e)
+}
+
+// Migration: Add is_hidden to tags if missing
+try {
+  const tableInfo = db.prepare('PRAGMA table_info(tags)').all()
+  const hasHidden = tableInfo.some((col: any) => col.name === 'is_hidden')
+  if (!hasHidden) {
+    console.log('[DB] Applying migration: Add is_hidden column to tags')
+    db.prepare('ALTER TABLE tags ADD COLUMN is_hidden INTEGER DEFAULT 0').run()
+  }
+} catch (e) {
+  console.error('[DB] Schema migration failed (tags)', e)
 }
 
 // Ensure index exists (safe to run after migration/table creation)
@@ -325,7 +341,7 @@ export const getAllTags = {
       FROM tags t
       LEFT JOIN image_tags it ON t.id = it.tag_id
       GROUP BY t.id
-      ORDER BY t.name ASC
+      ORDER BY t.is_hidden ASC, t.name ASC
     `
       )
       .all() as Tag[]
@@ -335,6 +351,13 @@ export const getAllTags = {
 export const toggleFavoriteTag = {
   run: async (pt: { id: number }) => {
     db.prepare('UPDATE tags SET is_favorite = 1 - is_favorite WHERE id = ?').run(pt.id)
+    return db.prepare('SELECT * FROM tags WHERE id = ?').get(pt.id) as Tag
+  },
+}
+
+export const toggleHiddenTag = {
+  run: async (pt: { id: number }) => {
+    db.prepare('UPDATE tags SET is_hidden = 1 - is_hidden WHERE id = ?').run(pt.id)
     return db.prepare('SELECT * FROM tags WHERE id = ?').get(pt.id) as Tag
   },
 }
@@ -438,7 +461,7 @@ export const getTagsForImage = {
       FROM tags t
       JOIN image_tags it ON t.id = it.tag_id
       WHERE it.image_id = ?
-      ORDER BY t.name ASC
+      ORDER BY t.is_hidden ASC, t.name ASC
     `
       )
       .all(pt.imageId) as Tag[]

@@ -11,6 +11,7 @@ export interface Tag {
   name: string
   count?: number
   is_favorite?: boolean
+  is_hidden?: boolean
 }
 
 export interface TagGroup {

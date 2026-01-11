@@ -88,3 +88,58 @@ export async function getImageMetadata(filepath: string): Promise<ImageMetadata 
     return null
   }
 }
+
+/**
+ * Extracts tags from Stable Diffusion WebUI style prompt metadata.
+ * It takes the "parameters" string and extracts meaningful tags.
+ */
+export function extractPromptTags(parameters: string): string[] {
+  if (!parameters) return []
+
+  // 1. Extract the main prompt (before "Negative prompt:" or "Steps:")
+  let prompt = parameters
+  const negIndex = prompt.indexOf('\nNegative prompt:')
+  if (negIndex !== -1) {
+    prompt = prompt.substring(0, negIndex)
+  } else {
+    const stepsIndex = prompt.indexOf('\nSteps:')
+    if (stepsIndex !== -1) {
+      prompt = prompt.substring(0, stepsIndex)
+    }
+  }
+
+  // 2. Cleanup: replace control characters with spaces
+  prompt = prompt.replace(/[\n\r\t]/g, ' ')
+
+  // 3. Remove emphasis/weight notations
+  // (tag:1.5) -> tag
+  // (tag) -> tag
+  // tag:1.5 -> tag
+  // [tag] -> tag
+  // {tag} -> tag
+  prompt = prompt.replace(/\(([^:)]+)(?::[^)]+)?\)/g, '$1') // (tag:1.2) or (tag)
+  prompt = prompt.replace(/\[([^:\]]+)(?::[^\]]+)?\]/g, '$1') // [tag:1.2] or [tag]
+  prompt = prompt.replace(/\{([^:}]+)(?::[^}]+)?\}/g, '$1') // {tag:1.2} or {tag}
+  prompt = prompt.replace(/([^,\s]+):[0-9.]+/g, '$1') // lone tag:1.2
+
+  // 4. Split by comma and space
+  const rawTags = prompt.split(/[ ,]+/)
+
+  // 5. Filter and clean
+  const tags = new Set<string>()
+  for (let tag of rawTags) {
+    tag = tag.trim()
+    // Skip empty, pure numbers, or common control words like BREAK
+    if (
+      !tag ||
+      /^[0-9.]+$/.test(tag) ||
+      tag.toUpperCase() === 'BREAK' ||
+      tag.toUpperCase() === 'NSFW'
+    ) {
+      continue
+    }
+    tags.add(tag)
+  }
+
+  return Array.from(tags)
+}

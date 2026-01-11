@@ -25,6 +25,7 @@ function App(): JSX.Element {
   const [tagSearchTerm, setTagSearchTerm] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [settings, setSettings] = useState<Settings>({ threadCount: 2 })
+  const [showHidden, setShowHidden] = useState(false)
 
   // Tag Groups
   const [tagGroups, setTagGroups] = useState<TagGroup[]>([])
@@ -115,6 +116,7 @@ function App(): JSX.Element {
     scanProgress,
     openFolder,
     toggleFavorite,
+    toggleHidden,
     showItemInFolder,
     clearLibrary,
     rescanLibrary,
@@ -276,6 +278,9 @@ function App(): JSX.Element {
         tagSearchTerm={tagSearchTerm}
         onSearchChange={setTagSearchTerm}
         onToggleFavorite={toggleFavorite}
+        showHidden={showHidden}
+        onToggleShowHidden={() => setShowHidden((prev) => !prev)}
+        onToggleHidden={toggleHidden}
         tagGroups={tagGroups}
         onGroupClick={handleGroupClick}
         onCreateGroup={handleCreateGroup}

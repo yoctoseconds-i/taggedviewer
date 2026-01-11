@@ -15,7 +15,10 @@
     "createGroup": "グループを作成",
     "editGroup": "グループを編集",
     "settings": "設定",
-    "toggleSort": "並び替え順を切り替え"
+    "toggleSort": "並び替え順を切り替え",
+    "showHidden": "非表示タグを表示",
+    "hideTag": "タグを非表示にする",
+    "unhideTag": "タグを表示する"
   },
   "settings": {
     "title": "設定",

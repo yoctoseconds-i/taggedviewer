@@ -193,33 +193,35 @@ export const ImageViewer = ({
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
             <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">
-              {t('viewer.tags')} ({tags.length})
+              {t('viewer.tags')} ({tags.filter((t) => !t.is_hidden).length})
             </h3>
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <button
-                  key={tag.id}
-                  onClick={() => onTagClick(tag.name)}
-                  className="group flex items-center gap-2 bg-gray-800/50 hover:bg-indigo-500/20 text-gray-300 hover:text-indigo-300 px-3 py-1.5 rounded-full text-xs font-medium border border-white/5 hover:border-indigo-500/30 transition-all active:scale-90"
-                >
-                  {tag.name}
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onToggleFavorite(tag.id)
-                    }}
-                    className={`p-1 rounded-full transition-colors ${
-                      tag.is_favorite ? 'bg-amber-400/20' : 'hover:bg-white/10'
-                    }`}
+              {tags
+                .filter((t) => !t.is_hidden)
+                .map((tag) => (
+                  <button
+                    key={tag.id}
+                    onClick={() => onTagClick(tag.name)}
+                    className="group flex items-center gap-2 bg-gray-800/50 hover:bg-indigo-500/20 text-gray-300 hover:text-indigo-300 px-3 py-1.5 rounded-full text-xs font-medium border border-white/5 hover:border-indigo-500/30 transition-all active:scale-90"
                   >
-                    <Star
-                      className={`w-3 h-3 ${
-                        tag.is_favorite ? 'text-amber-400 fill-amber-400' : 'text-gray-600'
+                    {tag.name}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleFavorite(tag.id)
+                      }}
+                      className={`p-1 rounded-full transition-colors ${
+                        tag.is_favorite ? 'bg-amber-400/20' : 'hover:bg-white/10'
                       }`}
-                    />
-                  </div>
-                </button>
-              ))}
+                    >
+                      <Star
+                        className={`w-3 h-3 ${
+                          tag.is_favorite ? 'text-amber-400 fill-amber-400' : 'text-gray-600'
+                        }`}
+                      />
+                    </div>
+                  </button>
+                ))}
             </div>
           </div>
         </div>

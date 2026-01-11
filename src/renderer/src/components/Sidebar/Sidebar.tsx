@@ -7,6 +7,8 @@ import {
   Plus,
   Pencil,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { Tag, TagGroup } from '../../types'
 import { useTranslation } from 'react-i18next'
@@ -17,6 +19,9 @@ interface SidebarProps {
   onTagClick: (tagName: string | null) => void
   onToggleSort: () => void
   onOpenSettings: () => void
+  showHidden: boolean
+  onToggleShowHidden: () => void
+  onToggleHidden: (id: number) => void
   tagSearchTerm: string
   onSearchChange: (term: string) => void
   onToggleFavorite: (id: number) => void
@@ -33,6 +38,9 @@ export const Sidebar = ({
 
   onToggleSort,
   onOpenSettings,
+  showHidden,
+  onToggleShowHidden,
+  onToggleHidden,
   tagSearchTerm,
   onSearchChange,
   onToggleFavorite,
@@ -42,8 +50,8 @@ export const Sidebar = ({
   onEditGroup,
 }: SidebarProps) => {
   const { t } = useTranslation()
-  const favoriteTags = tags.filter((t) => t.is_favorite)
-  const otherTags = tags.filter((t) => !t.is_favorite)
+  const favoriteTags = tags.filter((t) => t.is_favorite && (!t.is_hidden || showHidden))
+  const otherTags = tags.filter((t) => !t.is_favorite && (!t.is_hidden || showHidden))
 
   const renderTag = (tag: Tag) => {
     const isActive = activeTags.includes(tag.name)
@@ -54,7 +62,7 @@ export const Sidebar = ({
           isActive
             ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
             : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200 border-transparent'
-        }`}
+        } ${tag.is_hidden ? 'opacity-50 grayscale-[0.5]' : ''}`}
       >
         <button
           onClick={() => onTagClick(tag.name)}
@@ -79,11 +87,28 @@ export const Sidebar = ({
             onToggleFavorite(tag.id)
           }}
           aria-label={tag.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
-          className={`px-2 py-2 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 ${
-            tag.is_favorite ? 'opacity-100 text-amber-400' : 'text-gray-600 hover:text-amber-400'
+          className={`px-2 py-2 transition-colors flex items-center justify-center ${
+            tag.is_favorite
+              ? 'opacity-100 text-amber-400'
+              : 'opacity-0 group-hover:opacity-100 focus:opacity-100 text-gray-600 hover:text-amber-400'
           }`}
         >
           <Star className={`w-3.5 h-3.5 ${tag.is_favorite ? 'fill-amber-400' : ''}`} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleHidden(tag.id)
+          }}
+          aria-label={tag.is_hidden ? t('sidebar.unhideTag') : t('sidebar.hideTag')}
+          title={tag.is_hidden ? t('sidebar.unhideTag') : t('sidebar.hideTag')}
+          className={`px-2 py-2 transition-colors flex items-center justify-center ${
+            tag.is_hidden
+              ? 'opacity-100 text-red-400'
+              : 'opacity-0 group-hover:opacity-100 focus:opacity-100 text-gray-600 hover:text-red-400'
+          }`}
+        >
+          {tag.is_hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
         </button>
       </div>
     )
@@ -102,6 +127,15 @@ export const Sidebar = ({
             title={t('sidebar.toggleSort')}
           >
             <ArrowUpDown className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onToggleShowHidden}
+            className={`p-1.5 transition-colors ${
+              showHidden ? 'text-indigo-400' : 'text-gray-500 hover:text-indigo-400'
+            }`}
+            title={t('sidebar.showHidden')}
+          >
+            {showHidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
           <button
             onClick={onOpenSettings}

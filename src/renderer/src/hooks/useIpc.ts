@@ -77,6 +77,12 @@ export const useIpc = (loadData: () => void) => {
     loadData()
   }
 
+  const toggleHidden = async (id: number) => {
+    // @ts-ignore
+    await window.electron.ipcRenderer.invoke('db:toggleHiddenTag', id)
+    loadData()
+  }
+
   const showItemInFolder = async (filepath: string) => {
     // @ts-ignore
     await window.electron.ipcRenderer.invoke('shell:showItemInFolder', filepath)
@@ -131,6 +137,7 @@ export const useIpc = (loadData: () => void) => {
     scanProgress,
     openFolder,
     toggleFavorite,
+    toggleHidden,
     showItemInFolder,
     clearLibrary,
     checkForUpdates,
