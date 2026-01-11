@@ -1,5 +1,20 @@
 import fs from 'fs'
-import sharp from 'sharp'
+
+let sharp: any = null
+
+async function getSharp(): Promise<any> {
+  if (sharp) return sharp
+  if (process.env.NODE_ENV === 'test') {
+    sharp = (await import('sharp')).default
+  } else {
+    // In production, use createRequire to ensure it's loaded from node_modules
+    // the variable name is deliberate to avoid vite detection if possible
+    const { createRequire } = await import('module')
+    const require_ = createRequire(import.meta.url)
+    sharp = require_('sharp')
+  }
+  return sharp
+}
 
 export interface ImageMetadata {
   text: Record<string, string>
@@ -8,7 +23,8 @@ export interface ImageMetadata {
 
 export async function getImageMetadata(filepath: string): Promise<ImageMetadata | null> {
   try {
-    const metadata = await sharp(filepath).metadata()
+    const sharpInstance = await getSharp()
+    const metadata = await sharpInstance(filepath).metadata()
     const text = (metadata as any).text || {}
 
     const result: ImageMetadata = {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { X, Search, Check, Plus, Tag as TagIcon, Trash2 } from 'lucide-react'
 import { Tag, TagGroup } from '../../types'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +26,7 @@ export const TagGroupModal = ({
   const [name, setName] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set())
   const [searchTerm, setSearchTerm] = useState('')
+  const hasInitialized = useRef(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -33,10 +34,33 @@ export const TagGroupModal = ({
         setName(groupToEdit.name)
         setSelectedTagIds(new Set(groupToEdit.tags.map((t) => t.id)))
       } else {
+        // Initializing with empty state for new group
         setName('')
-        setSelectedTagIds(new Set(initialTags.map((t) => t.id)))
       }
-      setSearchTerm('')
+    }
+  }, [isOpen, groupToEdit, setName, setSelectedTagIds]) // Only run when isOpen or groupToEdit changes
+
+  useEffect(() => {
+    if (isOpen && !groupToEdit && name === '' && selectedTagIds.size === 0) {
+      setSelectedTagIds(new Set(initialTags.map((t) => t.id)))
+    }
+  }, [isOpen, initialTags, groupToEdit, name, selectedTagIds.size, setSelectedTagIds])
+
+  useEffect(() => {
+    if (isOpen) {
+      if (!hasInitialized.current) {
+        if (groupToEdit) {
+          setName(groupToEdit.name)
+          setSelectedTagIds(new Set(groupToEdit.tags.map((t) => t.id)))
+        } else {
+          setName('')
+          setSelectedTagIds(new Set(initialTags.map((t) => t.id)))
+        }
+        setSearchTerm('')
+        hasInitialized.current = true
+      }
+    } else {
+      hasInitialized.current = false
     }
   }, [isOpen, groupToEdit, initialTags])
 
@@ -85,14 +109,23 @@ export const TagGroupModal = ({
             <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">
               {t('groupModal.nameLabel')}
             </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('groupModal.namePlaceholder')}
-              className="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('groupModal.namePlaceholder')}
+                className="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 pr-8 text-sm text-white focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+              />
+              {name && (
+                <button
+                  onClick={() => setName('')}
+                  className="absolute right-2 top-2 text-gray-500 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-1 flex-1 flex flex-col min-h-0">
@@ -101,15 +134,23 @@ export const TagGroupModal = ({
             </label>
 
             {/* Tag Search */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-500" />
+            <div className="relative group">
+              <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-500 pointer-events-none" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('groupModal.searchPlaceholder')}
-                className="w-full bg-gray-950 border border-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500/50"
+                className="w-full bg-gray-950 border border-gray-800 rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500/50"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 top-2.5 text-gray-500 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Tag List */}

@@ -1,7 +1,7 @@
 import { join } from 'path'
 import { app } from 'electron'
 import { existsSync, readFileSync, renameSync, statSync } from 'fs'
-import Database from 'better-sqlite3'
+const Database = require('better-sqlite3')
 import { scanDirectory } from './scanner'
 
 export interface Image {

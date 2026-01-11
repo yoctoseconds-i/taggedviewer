@@ -113,7 +113,11 @@ export const SettingsModal = ({
                   <p className="text-zinc-400 text-sm">{t('settings.githubDesc')}</p>
                 </div>
                 <button
-                  onClick={() => (window.electron as any).shell.openExternal('https://github.com/rshkkngtm08/taggedviewer')}
+                  onClick={() =>
+                    (window.electron as any).shell.openExternal(
+                      'https://github.com/rshkkngtm08/taggedviewer'
+                    )
+                  }
                   className="flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors border border-zinc-600"
                 >
                   <Github size={18} />

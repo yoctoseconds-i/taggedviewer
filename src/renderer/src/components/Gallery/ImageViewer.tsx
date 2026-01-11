@@ -41,6 +41,12 @@ export const ImageViewer = ({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return
+      }
       if (e.key === 'Escape') onClose()
       if (e.key === 'ArrowLeft' && onPrev) onPrev()
       if (e.key === 'ArrowRight' && onNext) onNext()

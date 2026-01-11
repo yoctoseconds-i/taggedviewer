@@ -84,7 +84,8 @@
     "confirmDelete": "本当にこのグループを削除しますか？",
     "create": "作成",
     "edit": "編集",
-    "remove": "削除"
+    "remove": "削除",
+    "clear": "消去"
   },
   "groupModal": {
     "newTitle": "新規タググループ",

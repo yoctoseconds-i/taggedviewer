@@ -1,9 +1,0 @@
-
-F:\codes\antigravity\taggedviewer\src\main\db.ts
-  609:25  error  Replace `resolve` with `(resolve)`                                                                                                                                                          prettier/prettier
-  616:29  error  Replace `.prepare('SELECTﾂｷid,ﾂｷfilepathﾂｷFROMﾂｷimagesﾂｷWHEREﾂｷfilepathﾂｷLIKEﾂｷ?ﾂｷESCAPEﾂｷ"\\"')` with `竢篠ｷﾂｷﾂｷﾂｷﾂｷﾂｷ.prepare('SELECTﾂｷid,ﾂｷfilepathﾂｷFROMﾂｷimagesﾂｷWHEREﾂｷfilepathﾂｷLIKEﾂｷ?ﾂｷESCAPEﾂｷ"\\"')竢篠ｷﾂｷﾂｷﾂｷﾂｷﾂｷ`  prettier/prettier
-  634:29  error  Replace `resolve` with `(resolve)`                                                                                                                                                          prettier/prettier
-
-笨・3 problems (3 errors, 0 warnings)
-  3 errors and 0 warnings potentially fixable with the `--fix` option.
-

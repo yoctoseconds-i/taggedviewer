@@ -6,6 +6,7 @@ import {
   Layers,
   Plus,
   Pencil,
+  X,
 } from 'lucide-react'
 import { Tag, TagGroup } from '../../types'
 import { useTranslation } from 'react-i18next'
@@ -114,14 +115,23 @@ export const Sidebar = ({
 
       <div className="p-3 shrink-0">
         <div className="relative group">
-          <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-500 group-focus-within:text-indigo-400 transition-colors" />
+          <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-500 group-focus-within:text-indigo-400 transition-colors pointer-events-none" />
           <input
             type="text"
             placeholder={t('sidebar.searchPlaceholder')}
-            className="w-full bg-gray-900 border border-gray-800 rounded-lg py-2 pl-8 pr-3 text-xs text-gray-300 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+            className="w-full bg-gray-900 border border-gray-800 rounded-lg py-2 pl-8 pr-8 text-xs text-gray-300 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 transition-all"
             value={tagSearchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
+          {tagSearchTerm && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-2.5 text-gray-500 hover:text-white transition-colors"
+              title={t('common.clear')} // Assuming common.clear exists or will be added
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
