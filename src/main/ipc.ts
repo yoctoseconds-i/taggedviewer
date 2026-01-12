@@ -8,6 +8,7 @@ import {
   clearDatabase,
   resetProcessed,
   toggleHiddenTag,
+  toggleFavoriteTag,
   getTagsForImage,
   getSettings,
   updateSettings,
@@ -113,6 +114,10 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('db:toggleHiddenTag', async (_, id: number) => {
     return await toggleHiddenTag.run({ id })
+  })
+
+  ipcMain.handle('db:toggleFavoriteTag', async (_, id: number) => {
+    return await toggleFavoriteTag.run({ id })
   })
 
   ipcMain.handle('db:getTagsForImage', async (_, imageId: number) => {
