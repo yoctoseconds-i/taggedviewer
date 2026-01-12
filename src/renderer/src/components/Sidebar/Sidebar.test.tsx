@@ -1,6 +1,17 @@
+import { Tag, TagGroup } from '../../types'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { Sidebar } from './Sidebar'
+
+vi.mock('react-virtuoso', () => ({
+  Virtuoso: ({ data, itemContent }: any) => (
+    <div>
+      {data.map((item: any, index: number) => (
+        <div key={index}>{itemContent(index, item)}</div>
+      ))}
+    </div>
+  ),
+}))
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({

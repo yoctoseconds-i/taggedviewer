@@ -112,18 +112,18 @@ export function extractPromptTags(parameters: string): string[] {
   prompt = prompt.replace(/[\n\r\t]/g, ' ')
 
   // 3. Remove emphasis/weight notations
-  // (tag:1.5) -> tag
-  // (tag) -> tag
-  // tag:1.5 -> tag
-  // [tag] -> tag
-  // {tag} -> tag
-  prompt = prompt.replace(/\(([^:)]+)(?::[^)]+)?\)/g, '$1') // (tag:1.2) or (tag)
-  prompt = prompt.replace(/\[([^:\]]+)(?::[^\]]+)?\]/g, '$1') // [tag:1.2] or [tag]
-  prompt = prompt.replace(/\{([^:}]+)(?::[^}]+)?\}/g, '$1') // {tag:1.2} or {tag}
+  // Use a loop to handle nested brackets like ((tag)) or [[[tag]]]
+  let lastPrompt = ''
+  while (prompt !== lastPrompt) {
+    lastPrompt = prompt
+    prompt = prompt.replace(/\(([^:)]+)(?::[^)]+)?\)/g, '$1') // (tag:1.2) or (tag)
+    prompt = prompt.replace(/\[([^:\]]+)(?::[^\]]+)?\]/g, '$1') // [tag:1.2] or [tag]
+    prompt = prompt.replace(/\{([^:}]+)(?::[^}]+)?\}/g, '$1') // {tag:1.2} or {tag}
+  }
   prompt = prompt.replace(/([^,\s]+):[0-9.]+/g, '$1') // lone tag:1.2
 
-  // 4. Split by comma and space
-  const rawTags = prompt.split(/[ ,]+/)
+  // 4. Split by comma
+  const rawTags = prompt.split(/[,]+/)
 
   // 5. Filter and clean
   const tags = new Set<string>()

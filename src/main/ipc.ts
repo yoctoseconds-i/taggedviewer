@@ -7,7 +7,6 @@ import {
   getAllTags,
   clearDatabase,
   resetProcessed,
-  toggleFavoriteTag,
   toggleHiddenTag,
   getTagsForImage,
   getSettings,

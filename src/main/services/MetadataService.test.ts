@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import fs from 'fs'
 import sharp from 'sharp'
-import { getImageMetadata } from './MetadataService'
+import { getImageMetadata, extractPromptTags } from './MetadataService'
 
 vi.mock('fs')
 vi.mock('sharp')
@@ -74,5 +74,35 @@ describe('MetadataService', () => {
 
     const result = await getImageMetadata('test.jpg')
     expect(result?.text.parameters).toContain('Detected potential prompt')
+  })
+
+  describe('extractPromptTags', () => {
+    it('should extract simple tags', () => {
+      const tags = extractPromptTags('masterpiece, best quality, girl')
+      expect(tags).toContain('masterpiece')
+      expect(tags).toContain('best quality')
+      expect(tags).toContain('girl')
+    })
+
+    it('should remove simple brackets', () => {
+      const tags = extractPromptTags('(masterpiece), [best quality], {girl}')
+      expect(tags).toEqual(['masterpiece', 'best quality', 'girl'])
+    })
+
+    it('should remove nested brackets', () => {
+      const tags = extractPromptTags('((masterpiece)), [[[best quality]]]')
+      expect(tags).toEqual(['masterpiece', 'best quality'])
+    })
+
+    it('should remove weights', () => {
+      const tags = extractPromptTags('(masterpiece:1.2), girl:1.5')
+      expect(tags).toEqual(['masterpiece', 'girl'])
+    })
+
+    it('should ignore Negative prompt and Steps', () => {
+      const params = 'masterpiece, girl\nNegative prompt: lowres\nSteps: 20'
+      const tags = extractPromptTags(params)
+      expect(tags).toEqual(['masterpiece', 'girl'])
+    })
   })
 })

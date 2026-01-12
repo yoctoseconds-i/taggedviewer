@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Tag, TagGroup } from '../../types'
 import { useTranslation } from 'react-i18next'
+import { Virtuoso } from 'react-virtuoso'
 
 interface SidebarProps {
   tags: Tag[]
@@ -186,14 +187,20 @@ export const Sidebar = ({
 
         {/* Favorites Section */}
         {favoriteTags.length > 0 && (
-          <div>
-            <div className="px-3 mb-2 flex items-center justify-between">
+          <div className="flex flex-col h-[200px] min-h-[100px]">
+            <div className="px-3 mb-2 flex items-center justify-between shrink-0">
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                 {t('sidebar.favorites')}
               </span>
               <div className="h-px flex-1 bg-gray-800/50 ml-3" />
             </div>
-            <div className="space-y-0.5">{favoriteTags.map(renderTag)}</div>
+            <div className="flex-1">
+              <Virtuoso
+                style={{ height: '100%' }}
+                data={favoriteTags}
+                itemContent={(_, tag) => <div className="py-0.5">{renderTag(tag)}</div>}
+              />
+            </div>
           </div>
         )}
 
@@ -246,14 +253,20 @@ export const Sidebar = ({
 
         {/* Tags Section */}
         {otherTags.length > 0 && (
-          <div>
-            <div className="px-3 mb-2 flex items-center justify-between">
+          <div className="flex flex-col h-[400px] min-h-[200px]">
+            <div className="px-3 mb-2 flex items-center justify-between shrink-0">
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                 {t('sidebar.tags')}
               </span>
               <div className="h-px flex-1 bg-gray-800/50 ml-3" />
             </div>
-            <div className="space-y-0.5">{otherTags.map(renderTag)}</div>
+            <div className="flex-1">
+              <Virtuoso
+                style={{ height: '100%' }}
+                data={otherTags}
+                itemContent={(_, tag) => <div className="py-0.5">{renderTag(tag)}</div>}
+              />
+            </div>
           </div>
         )}
       </div>
