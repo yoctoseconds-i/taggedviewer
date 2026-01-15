@@ -122,8 +122,8 @@ export function extractPromptTags(parameters: string): string[] {
   }
   prompt = prompt.replace(/([^,\s]+):[0-9.]+/g, '$1') // lone tag:1.2
 
-  // 4. Split by comma
-  const rawTags = prompt.split(/[,]+/)
+  // 4. Split by comma or space
+  const rawTags = prompt.split(/[, \t]+/)
 
   // 5. Filter and clean
   const tags = new Set<string>()

@@ -80,18 +80,19 @@ describe('MetadataService', () => {
     it('should extract simple tags', () => {
       const tags = extractPromptTags('masterpiece, best quality, girl')
       expect(tags).toContain('masterpiece')
-      expect(tags).toContain('best quality')
+      expect(tags).toContain('best')
+      expect(tags).toContain('quality')
       expect(tags).toContain('girl')
     })
 
     it('should remove simple brackets', () => {
       const tags = extractPromptTags('(masterpiece), [best quality], {girl}')
-      expect(tags).toEqual(['masterpiece', 'best quality', 'girl'])
+      expect(tags).toEqual(['masterpiece', 'best', 'quality', 'girl'])
     })
 
     it('should remove nested brackets', () => {
       const tags = extractPromptTags('((masterpiece)), [[[best quality]]]')
-      expect(tags).toEqual(['masterpiece', 'best quality'])
+      expect(tags).toEqual(['masterpiece', 'best', 'quality'])
     })
 
     it('should remove weights', () => {
@@ -103,6 +104,11 @@ describe('MetadataService', () => {
       const params = 'masterpiece, girl\nNegative prompt: lowres\nSteps: 20'
       const tags = extractPromptTags(params)
       expect(tags).toEqual(['masterpiece', 'girl'])
+    })
+
+    it('should split by space as well', () => {
+      const tags = extractPromptTags('masterpiece best quality girl')
+      expect(tags).toEqual(['masterpiece', 'best', 'quality', 'girl'])
     })
   })
 })
