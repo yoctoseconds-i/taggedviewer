@@ -1,6 +1,6 @@
 import { join } from 'path'
 import { app } from 'electron'
-import { existsSync, readFileSync, renameSync, statSync } from 'fs'
+import { existsSync, renameSync, statSync, mkdirSync, copyFileSync } from 'fs'
 const Database = require('better-sqlite3')
 import { scanDirectory } from './scanner'
 
@@ -33,9 +33,13 @@ export interface ImageTag {
   score: number
 }
 
+// Per-library settings
 export interface Settings {
   threadCount: number
   language?: string
+  // Library Path is no longer stored here as a setting effectively,
+  // but we might keep it for legacy reasons or UI logic, but it's redundant
+  // as the db IS in the library path.
   libraryPath?: string
 }
 
@@ -48,22 +52,166 @@ const getUserDataPath = () => {
   }
 }
 
-const dbPath = join(getUserDataPath(), 'taggedviewer-db-v2.sqlite')
-const oldDbPath = join(getUserDataPath(), 'taggedviewer-db.json')
-const db = new Database(dbPath)
+// Global legacy paths for migration
+const legacyDbPath = join(getUserDataPath(), 'taggedviewer-db-v2.sqlite')
 
-// Performance Optimizations
-db.pragma('journal_mode = WAL')
-db.pragma('synchronous = NORMAL')
-db.pragma('temp_store = MEMORY')
-db.pragma('cache_size = -64000') // 64MB cache
+class DatabaseManager {
+  private _db: any = null
+  private currentLibraryPath: string | null = null
 
-// Custom function to get file extension
-db.function('GetExtension', (filepath: string) => {
-  if (!filepath) return ''
-  const parts = filepath.split('.')
-  return parts.length > 1 ? parts.pop()!.toLowerCase() : ''
-})
+  get db() {
+    if (!this._db) {
+      throw new Error('Database not connected. Please open a library first.')
+    }
+    return this._db
+  }
+
+  isOpen(): boolean {
+    return !!this._db
+  }
+
+  getCurrentLibraryPath() {
+    return this.currentLibraryPath
+  }
+
+  connect(libraryPath: string) {
+    if (this._db) {
+      this._db.close()
+      this._db = null
+    }
+
+    if (!existsSync(libraryPath)) {
+      mkdirSync(libraryPath, { recursive: true })
+    }
+
+    const dotDir = join(libraryPath, '.taggedviewer')
+    if (!existsSync(dotDir)) {
+      mkdirSync(dotDir, { recursive: true })
+    }
+
+    const dbPath = join(dotDir, 'taggedviewer.sqlite')
+    console.log(`[DB] Connecting to ${dbPath}`)
+
+    this._db = new Database(dbPath)
+    this.currentLibraryPath = libraryPath
+    this.initPragma()
+    this.initSchema()
+
+    // Ensure we have libraryPath set in settings for consistency
+    const currentSettings = getSettings.get()
+    if (currentSettings.libraryPath !== libraryPath) {
+      updateSettings.run({ libraryPath })
+    }
+  }
+
+  private initPragma() {
+    this._db.pragma('journal_mode = WAL')
+    this._db.pragma('synchronous = NORMAL')
+    this._db.pragma('temp_store = MEMORY')
+    this._db.pragma('cache_size = -64000') // 64MB cache
+
+    // Custom function to get file extension
+    try {
+      this._db.function('GetExtension', (filepath: string) => {
+        if (!filepath) return ''
+        const parts = filepath.split('.')
+        return parts.length > 1 ? parts.pop()!.toLowerCase() : ''
+      })
+    } catch {
+      // Ignore if already registered (though unlikely with new connection)
+    }
+  }
+
+  private initSchema() {
+    this._db.exec(`
+      CREATE TABLE IF NOT EXISTS images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filepath TEXT UNIQUE,
+        hash TEXT,
+        scanned_at TEXT,
+        file_modified_at TEXT,
+        processed INTEGER DEFAULT 0
+      );
+    
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,
+        is_favorite INTEGER DEFAULT 0,
+        is_hidden INTEGER DEFAULT 0
+      );
+    
+      CREATE TABLE IF NOT EXISTS image_tags (
+        image_id INTEGER,
+        tag_id INTEGER,
+        score REAL,
+        PRIMARY KEY (image_id, tag_id),
+        FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      );
+    
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      );
+    
+      CREATE INDEX IF NOT EXISTS idx_images_scanned_at ON images(scanned_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_image_tags_tag_id ON image_tags(tag_id);
+      CREATE INDEX IF NOT EXISTS idx_image_tags_composite ON image_tags(tag_id, image_id);
+      CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+      CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC);
+      
+      CREATE TABLE IF NOT EXISTS tag_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE
+      );
+    
+      CREATE TABLE IF NOT EXISTS tag_group_tags (
+        group_id INTEGER,
+        tag_id INTEGER,
+        PRIMARY KEY (group_id, tag_id),
+        FOREIGN KEY (group_id) REFERENCES tag_groups(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      );
+    `)
+  }
+
+  // Attempt to migrate from legacy global DB to a library-specific DB
+  // Returns the path of the library migrated to, or null if no migration happened
+  tryMigrateLegacy(): string | null {
+    if (existsSync(legacyDbPath)) {
+      console.log('[DB] Found legacy database, checking for migration...')
+      try {
+        const legacyDb = new Database(legacyDbPath)
+        const row = legacyDb
+          .prepare('SELECT value FROM settings WHERE key = ?')
+          .get('libraryPath') as any
+        const libraryPath = row ? JSON.parse(row.value) : null
+        legacyDb.close()
+
+        if (libraryPath && existsSync(libraryPath)) {
+          console.log(`[DB] Migrating legacy DB to ${libraryPath}`)
+          const dotDir = join(libraryPath, '.taggedviewer')
+          if (!existsSync(dotDir)) {
+            mkdirSync(dotDir, { recursive: true })
+          }
+          const targetDbPath = join(dotDir, 'taggedviewer.sqlite')
+          if (!existsSync(targetDbPath)) {
+            copyFileSync(legacyDbPath, targetDbPath)
+            console.log('[DB] Migration successful.')
+            // Rename legacy to avoid re-migration
+            renameSync(legacyDbPath, legacyDbPath + '.migrated')
+            return libraryPath
+          }
+        }
+      } catch (e) {
+        console.error('[DB] Migration failed', e)
+      }
+    }
+    return null
+  }
+}
+
+export const dbManager = new DatabaseManager()
 
 const getOrderByClause = (sortBy: string = 'date', order: 'asc' | 'desc' = 'desc') => {
   const dir = order === 'asc' ? 'ASC' : 'DESC'
@@ -76,165 +224,15 @@ const getOrderByClause = (sortBy: string = 'date', order: 'asc' | 'desc' = 'desc
       return 'ORDER BY RANDOM()'
     case 'date':
     default:
-      // Fallback to scanned_at if file_modified_at is null
       return `ORDER BY COALESCE(i.file_modified_at, i.scanned_at) ${dir}`
   }
 }
 
-// Initialize schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS images (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filepath TEXT UNIQUE,
-    hash TEXT,
-    scanned_at TEXT,
-    file_modified_at TEXT,
-    processed INTEGER DEFAULT 0
-  );
-
-  CREATE TABLE IF NOT EXISTS tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE,
-    is_favorite INTEGER DEFAULT 0,
-    is_hidden INTEGER DEFAULT 0
-  );
-
-  CREATE TABLE IF NOT EXISTS image_tags (
-    image_id INTEGER,
-    tag_id INTEGER,
-    score REAL,
-    PRIMARY KEY (image_id, tag_id),
-    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-  );
-
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_images_scanned_at ON images(scanned_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_image_tags_tag_id ON image_tags(tag_id);
-  CREATE INDEX IF NOT EXISTS idx_image_tags_composite ON image_tags(tag_id, image_id);
-  CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
-  
-  CREATE TABLE IF NOT EXISTS tag_groups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE
-  );
-
-  CREATE TABLE IF NOT EXISTS tag_group_tags (
-    group_id INTEGER,
-    tag_id INTEGER,
-    PRIMARY KEY (group_id, tag_id),
-    FOREIGN KEY (group_id) REFERENCES tag_groups(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-  );
-`)
-
-// Migration from LowDB
-if (existsSync(oldDbPath)) {
-  try {
-    const data = JSON.parse(readFileSync(oldDbPath, 'utf8'))
-    db.transaction(() => {
-      // Import images
-      const insertImg = db.prepare(
-        'INSERT OR IGNORE INTO images (filepath, hash, scanned_at, processed) VALUES (?, ?, ?, ?)'
-      )
-      for (const img of data.images || []) {
-        insertImg.run(img.filepath, img.hash || null, img.scanned_at, img.processed ? 1 : 0)
-      }
-
-      // Import tags
-      const insertTag = db.prepare(
-        'INSERT OR IGNORE INTO tags (name, is_favorite, is_hidden) VALUES (?, ?, ?)'
-      )
-      for (const tag of data.tags || []) {
-        insertTag.run(tag.name, tag.is_favorite ? 1 : 0, tag.is_hidden ? 1 : 0)
-      }
-
-      // Import links
-      const insertLink = db.prepare(
-        'INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, ?)'
-      )
-      // We need to map old IDs to new IDs because lowdb used Date.now()
-      const imgMap = new Map()
-      db.prepare('SELECT id, filepath FROM images')
-        .all()
-        .forEach((row: any) => imgMap.set(row.filepath, row.id))
-      const tagMap = new Map()
-      db.prepare('SELECT id, name FROM tags')
-        .all()
-        .forEach((row: any) => tagMap.set(row.name, row.id))
-
-      const oldImgMap = new Map()
-      for (const img of data.images || []) oldImgMap.set(img.id, img.filepath)
-      const oldTagMap = new Map()
-      for (const tag of data.tags || []) oldTagMap.set(tag.id, tag.name)
-
-      for (const link of data.image_tags || []) {
-        const filepath = oldImgMap.get(link.image_id)
-        const tagName = oldTagMap.get(link.tag_id)
-        const newImgId = imgMap.get(filepath)
-        const newTagId = tagMap.get(tagName)
-        if (newImgId && newTagId) {
-          insertLink.run(newImgId, newTagId, link.score || 1.0)
-        }
-      }
-
-      // Settings
-      if (data.settings) {
-        db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
-          'threadCount',
-          JSON.stringify(data.settings.threadCount)
-        )
-      }
-    })()
-    renameSync(oldDbPath, oldDbPath + '.bak')
-    console.log('[DB] Migration from JSON completed')
-  } catch (e) {
-    console.error('[DB] Migration failed', e)
-  }
-}
-
-// Migration: Add file_modified_at if missing
-try {
-  const tableInfo = db.prepare('PRAGMA table_info(images)').all()
-  const hasModifiedAt = tableInfo.some((col: any) => col.name === 'file_modified_at')
-  if (!hasModifiedAt) {
-    console.log('[DB] Applying migration: Add file_modified_at column')
-    db.prepare('ALTER TABLE images ADD COLUMN file_modified_at TEXT').run()
-    db.prepare(
-      'CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC)'
-    ).run()
-  }
-} catch (e) {
-  console.error('[DB] Schema migration failed (images)', e)
-}
-
-// Migration: Add is_hidden to tags if missing
-try {
-  const tableInfo = db.prepare('PRAGMA table_info(tags)').all()
-  const hasHidden = tableInfo.some((col: any) => col.name === 'is_hidden')
-  if (!hasHidden) {
-    console.log('[DB] Applying migration: Add is_hidden column to tags')
-    db.prepare('ALTER TABLE tags ADD COLUMN is_hidden INTEGER DEFAULT 0').run()
-  }
-} catch (e) {
-  console.error('[DB] Schema migration failed (tags)', e)
-}
-
-// Ensure index exists (safe to run after migration/table creation)
-try {
-  db.prepare(
-    'CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC)'
-  ).run()
-} catch (e) {
-  console.error('[DB] Index creation failed', e)
-}
+// --- Helpers wrapping dbManager.db ---
 
 export const insertImagesBulk = {
   run: async (filepaths: string[], mtimes?: Record<string, string>) => {
+    const db = dbManager.db
     const results: { id: number; filepath: string; inserted: boolean }[] = []
     const checkStmt = db.prepare('SELECT id FROM images WHERE filepath = ?')
     const insertStmt = db.prepare(
@@ -246,7 +244,6 @@ export const insertImagesBulk = {
         const existing = checkStmt.get(filepath) as any
         if (existing) {
           results.push({ id: existing.id, filepath, inserted: false })
-          // Optionally update mtime if existing?
         } else {
           const mtime = mtimes ? mtimes[filepath] : null
           const res = insertStmt.run(filepath, new Date().toISOString(), mtime)
@@ -268,19 +265,19 @@ export const insertImage = {
 
 export const markImageProcessed = {
   run: async (pt: { id: number }) => {
-    db.prepare('UPDATE images SET processed = 1 WHERE id = ?').run(pt.id)
+    dbManager.db.prepare('UPDATE images SET processed = 1 WHERE id = ?').run(pt.id)
   },
 }
 
 export const getUnprocessedImages = {
   get: async () => {
-    return db.prepare('SELECT * FROM images WHERE processed = 0').all() as Image[]
+    return dbManager.db.prepare('SELECT * FROM images WHERE processed = 0').all() as Image[]
   },
 }
 
 export const getImage = {
   get: async (pt: { filepath: string }) => {
-    return db.prepare('SELECT * FROM images WHERE filepath = ?').get(pt.filepath) as Image
+    return dbManager.db.prepare('SELECT * FROM images WHERE filepath = ?').get(pt.filepath) as Image
   },
 }
 
@@ -291,7 +288,7 @@ export const getAllImages = {
     sortBy: string = 'date',
     order: 'asc' | 'desc' = 'desc'
   ) => {
-    return db
+    return dbManager.db
       .prepare(
         `
       SELECT * FROM images i
@@ -305,13 +302,14 @@ export const getAllImages = {
 
 export const getImageCount = {
   get: async () => {
-    const res = db.prepare('SELECT COUNT(*) as count FROM images').get() as any
+    const res = dbManager.db.prepare('SELECT COUNT(*) as count FROM images').get() as any
     return res.count
   },
 }
 
 export const insertTagsBulk = {
   run: async (names: string[]) => {
+    const db = dbManager.db
     const stmt = db.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)')
     db.transaction(() => {
       for (const name of names) {
@@ -324,6 +322,7 @@ export const insertTagsBulk = {
 
 export const insertTag = {
   run: async (pt: { name: string }) => {
+    const db = dbManager.db
     const res = db.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)').run(pt.name.trim())
     if (res.changes > 0) return { lastInsertRowid: res.lastInsertRowid }
     const existing = db.prepare('SELECT id FROM tags WHERE name = ?').get(pt.name.trim()) as any
@@ -333,8 +332,7 @@ export const insertTag = {
 
 export const getAllTags = {
   all: async () => {
-    // High performance tag counting using SQL
-    return db
+    return dbManager.db
       .prepare(
         `
       SELECT t.*, COUNT(it.image_id) as count
@@ -350,6 +348,7 @@ export const getAllTags = {
 
 export const toggleFavoriteTag = {
   run: async (pt: { id: number }) => {
+    const db = dbManager.db
     db.prepare('UPDATE tags SET is_favorite = 1 - is_favorite WHERE id = ?').run(pt.id)
     return db.prepare('SELECT * FROM tags WHERE id = ?').get(pt.id) as Tag
   },
@@ -357,6 +356,7 @@ export const toggleFavoriteTag = {
 
 export const toggleHiddenTag = {
   run: async (pt: { id: number }) => {
+    const db = dbManager.db
     db.prepare('UPDATE tags SET is_hidden = 1 - is_hidden WHERE id = ?').run(pt.id)
     return db.prepare('SELECT * FROM tags WHERE id = ?').get(pt.id) as Tag
   },
@@ -364,6 +364,7 @@ export const toggleHiddenTag = {
 
 export const linkImageTagsBulk = {
   run: async (links: { imageId: number; tagId: number }[]) => {
+    const db = dbManager.db
     const stmt = db.prepare(
       'INSERT OR IGNORE INTO image_tags (image_id, tag_id, score) VALUES (?, ?, ?)'
     )
@@ -377,6 +378,7 @@ export const linkImageTagsBulk = {
 
 export const processImageResultsBulk = {
   run: async (imageResults: { imageId: number; tagNames: string[] }[]) => {
+    const db = dbManager.db
     const insertTagStmt = db.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)')
     const getTagIdStmt = db.prepare('SELECT id FROM tags WHERE name = ?')
     const linkStmt = db.prepare(
@@ -412,7 +414,7 @@ export const getImagesByTags = {
     if (!pt.tagNames || pt.tagNames.length === 0) return []
 
     const placeholders = pt.tagNames.map(() => '?').join(',')
-    return db
+    return dbManager.db
       .prepare(
         `
       SELECT i.* FROM images i
@@ -434,7 +436,7 @@ export const getImagesByTagsCount = {
     if (!pt.tagNames || pt.tagNames.length === 0) return 0
 
     const placeholders = pt.tagNames.map(() => '?').join(',')
-    const res = db
+    const res = dbManager.db
       .prepare(
         `
       SELECT COUNT(*) as count FROM (
@@ -454,7 +456,7 @@ export const getImagesByTagsCount = {
 
 export const getTagsForImage = {
   get: async (pt: { imageId: number }) => {
-    return db
+    return dbManager.db
       .prepare(
         `
       SELECT t.*, (SELECT COUNT(*) FROM image_tags it2 WHERE it2.tag_id = t.id) as count
@@ -470,6 +472,7 @@ export const getTagsForImage = {
 
 export const clearDatabase = {
   run: async () => {
+    const db = dbManager.db
     db.transaction(() => {
       db.prepare('DELETE FROM image_tags').run()
       db.prepare('DELETE FROM images').run()
@@ -480,12 +483,13 @@ export const clearDatabase = {
 
 export const resetProcessed = {
   run: async () => {
-    db.prepare('UPDATE images SET processed = 0').run()
+    dbManager.db.prepare('UPDATE images SET processed = 0').run()
   },
 }
 
 export const deleteImageByPath = {
   run: async (pt: { filepath: string }) => {
+    const db = dbManager.db
     const img = db.prepare('SELECT id FROM images WHERE filepath = ?').get(pt.filepath) as any
     if (img) {
       db.transaction(() => {
@@ -500,6 +504,7 @@ export const deleteImageByPath = {
 
 export const getSettings = {
   get: async () => {
+    const db = dbManager.db
     const threadRow = db
       .prepare('SELECT value FROM settings WHERE key = ?')
       .get('threadCount') as any
@@ -516,6 +521,7 @@ export const getSettings = {
 
 export const updateSettings = {
   run: async (settings: Partial<Settings>) => {
+    const db = dbManager.db
     if (settings.threadCount !== undefined) {
       db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
         'threadCount',
@@ -538,10 +544,9 @@ export const updateSettings = {
   },
 }
 
-// Backfill utility
-
 export const createTagGroup = {
   run: async (pt: { name: string; tagIds: number[] }) => {
+    const db = dbManager.db
     const insertGroup = db.prepare('INSERT INTO tag_groups (name) VALUES (?)')
     const insertLink = db.prepare('INSERT INTO tag_group_tags (group_id, tag_id) VALUES (?, ?)')
 
@@ -560,6 +565,7 @@ export const createTagGroup = {
 
 export const updateTagGroup = {
   run: async (pt: { id: number; name: string; tagIds: number[] }) => {
+    const db = dbManager.db
     const updateGroup = db.prepare('UPDATE tag_groups SET name = ? WHERE id = ?')
     const deleteLinks = db.prepare('DELETE FROM tag_group_tags WHERE group_id = ?')
     const insertLink = db.prepare('INSERT INTO tag_group_tags (group_id, tag_id) VALUES (?, ?)')
@@ -578,13 +584,14 @@ export const updateTagGroup = {
 
 export const deleteTagGroup = {
   run: async (pt: { id: number }) => {
-    db.prepare('DELETE FROM tag_groups WHERE id = ?').run(pt.id)
+    dbManager.db.prepare('DELETE FROM tag_groups WHERE id = ?').run(pt.id)
     return getAllTagGroups.get()
   },
 }
 
 export const getAllTagGroups = {
   get: async () => {
+    const db = dbManager.db
     const groups = db.prepare('SELECT * FROM tag_groups ORDER BY name ASC').all() as any[]
 
     const groupsWithTags = groups.map((group) => {
@@ -608,8 +615,8 @@ export const getAllTagGroups = {
 
 export const syncLibrary = {
   run: async (mainWindow?: any, options: { skipScan?: boolean; skipCleanup?: boolean } = {}) => {
-    const settings = await getSettings.get()
-    const libPath = settings.libraryPath
+    // With library switching, we just sync the current OPEN library
+    const libPath = dbManager.getCurrentLibraryPath()
     if (!libPath || !existsSync(libPath)) {
       console.log('[DB] Library sync skipped: libraryPath not set or invalid.')
       return { added: 0, removed: 0 }
@@ -626,6 +633,8 @@ export const syncLibrary = {
 
     let addedCount = 0
     let removedCount = 0
+
+    const db = dbManager.db
 
     // 1. Find and add new files
     const BATCH_SIZE = 100
@@ -651,7 +660,6 @@ export const syncLibrary = {
         })
       }
 
-      // Yield to event loop to keep UI responsive
       await new Promise((resolve) => setImmediate(resolve))
     }
 
@@ -660,16 +668,14 @@ export const syncLibrary = {
       return { added: addedCount, removed: 0 }
     }
 
-    // 2. Remove missing files from DB that should be in libraryPath
-    // Optimization: Only query images that start with libPath
+    // 2. Remove missing files (scope: everything in current library path)
     const escapeLike = (str: string) => str.replace(/[%_]/g, '\\$&')
     const pattern = escapeLike(libPath) + '%'
+    // We strictly only manage files INSIDE the library path now
     const imagesInScope = db
       .prepare("SELECT id, filepath FROM images WHERE filepath LIKE ? ESCAPE '\\'")
       .all(pattern) as Image[]
 
-    // If skipScan was true, we don't have filePaths set.
-    // If we want to cleanup WITHOUT scanning for NEW files, we still need the current folder state to know what's REMOVED.
     if (options.skipScan) {
       console.log(`[DB] Scanning directory for cleanup: ${libPath}`)
       files = await scanDirectory(libPath)
@@ -690,7 +696,6 @@ export const syncLibrary = {
         await deleteImageByPath.run({ filepath: toDelete[i] })
         removedCount++
 
-        // Yield occasionally
         if (i % 50 === 0) {
           await new Promise((resolve) => setImmediate(resolve))
         }
@@ -704,6 +709,7 @@ export const syncLibrary = {
 
 export const backfillFileDates = {
   run: async () => {
+    const db = dbManager.db
     const images = db
       .prepare('SELECT id, filepath FROM images WHERE file_modified_at IS NULL')
       .all() as Image[]
@@ -728,11 +734,10 @@ export const backfillFileDates = {
           }
         }
       })()
-      // Yield to event loop
       await new Promise((resolve) => setImmediate(resolve))
     }
     return { count: updated }
   },
 }
 
-export default db
+export default dbManager

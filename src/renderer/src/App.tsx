@@ -26,6 +26,7 @@ function App(): JSX.Element {
   const [showSettings, setShowSettings] = useState(false)
   const [settings, setSettings] = useState<Settings>({ threadCount: 2 })
   const [showHidden, setShowHidden] = useState(false)
+  const [libraryPath, setLibraryPathStr] = useState<string | null>(null)
 
   // Tag Groups
   const [tagGroups, setTagGroups] = useState<TagGroup[]>([])
@@ -124,7 +125,8 @@ function App(): JSX.Element {
     version,
     updateStatus,
     checkForUpdates,
-    setLibraryPath,
+    openLibrary,
+    getCurrentLibrary,
   } = useIpc(async () => loadData(true, 0))
 
   useEffect(() => {
@@ -143,10 +145,12 @@ function App(): JSX.Element {
       await window.electron.ipcRenderer.invoke('scan:resume')
       setIsScanning(false)
       loadData(true, 0)
+      setLibraryPathStr(await getCurrentLibrary())
+      loadData(true, 0)
       loadTagGroups()
     }
     init()
-  }, [setIsScanning, loadData, loadTagGroups, i18n])
+  }, [setIsScanning, loadData, loadTagGroups, i18n, getCurrentLibrary])
 
   useEffect(() => {
     setImages([])
@@ -285,6 +289,8 @@ function App(): JSX.Element {
         onGroupClick={handleGroupClick}
         onCreateGroup={handleCreateGroup}
         onEditGroup={handleEditGroup}
+        libraryPath={libraryPath}
+        onOpenLibrary={openLibrary}
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-gray-950/50 relative">
@@ -363,8 +369,7 @@ function App(): JSX.Element {
         updateStatus={updateStatus}
         onCheckForUpdates={checkForUpdates}
         onSelectLibrary={async () => {
-          const newSettings = await setLibraryPath()
-          if (newSettings) setSettings(newSettings)
+          await openLibrary()
         }}
       />
 

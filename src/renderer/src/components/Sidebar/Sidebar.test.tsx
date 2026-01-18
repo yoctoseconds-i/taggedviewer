@@ -41,6 +41,8 @@ describe('Sidebar', () => {
     onGroupClick: vi.fn(),
     onCreateGroup: vi.fn(),
     onEditGroup: vi.fn(),
+    libraryPath: null,
+    onOpenLibrary: vi.fn(),
   }
 
   it('renders favorite tags in a separate section', () => {

@@ -1,7 +1,7 @@
 import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { scanDirectory } from './scanner'
-import {
+import dbManager, {
   insertImagesBulk,
   getAllImages,
   getAllTags,
@@ -20,9 +20,77 @@ import {
   updateTagGroup,
 } from './db'
 import { processQueue, setTargetThreads } from './services/QueueService'
+import { globalSettings } from './GlobalSettings'
 
 export function setupIPC(mainWindow: BrowserWindow) {
+  // Initialization: Try to migrate or open last library
+  try {
+    const migratedPath = dbManager.tryMigrateLegacy()
+    if (migratedPath) {
+      globalSettings.addRecentLibrary(migratedPath)
+      dbManager.connect(migratedPath)
+    } else {
+      const lastLib = globalSettings.lastOpenLibrary
+      if (lastLib) {
+        try {
+          dbManager.connect(lastLib)
+        } catch (e) {
+          console.error(`Failed to connect to last library: ${lastLib}`, e)
+          globalSettings.setLastOpenLibrary(null)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to initialize database connection', e)
+  }
+
+  // --- Library Management IPC ---
+
+  ipcMain.handle('lib:open', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+    })
+    if (canceled || filePaths.length === 0) return null
+
+    const libPath = filePaths[0]
+    try {
+      dbManager.connect(libPath)
+      globalSettings.addRecentLibrary(libPath)
+      // Reload UI to refresh everything
+      mainWindow.reload()
+      return libPath
+    } catch (e) {
+      console.error('Failed to open library', e)
+      return null
+    }
+  })
+
+  ipcMain.handle('lib:switch', async (_, libPath: string) => {
+    try {
+      dbManager.connect(libPath)
+      globalSettings.addRecentLibrary(libPath)
+      mainWindow.reload()
+      return true
+    } catch (e) {
+      console.error('Failed to switch library', e)
+      return false
+    }
+  })
+
+  ipcMain.handle('lib:getRecent', async () => {
+    return globalSettings.recentLibraries
+  })
+
+  ipcMain.handle('lib:current', async () => {
+    return dbManager.getCurrentLibraryPath()
+  })
+
+  // --- Existing handlers (wrapped safely) ---
+
+  // We need to special case handlers that don't need DB or are "safe"
+
   ipcMain.handle('db:resetProcessed', async () => {
+    if (!dbManager.isOpen()) return false
     await resetProcessed.run()
     return true
   })
@@ -36,10 +104,17 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('scan:start', async (_, dirPath: string) => {
+    // Phase 1: Registration (Bulk)
+    // Note: scan:start in legacy used to take dirPath, which WAS the library path usually.
+    // Now library path is fixed. Scanning subdirs is fine.
+    // However, usually we scan the ROOT of the library.
+
+    // If dirPath is provided, we scan it.
     console.log(`Starting scan for ${dirPath}`)
     const files = await scanDirectory(dirPath)
 
-    // Phase 1: Registration (Bulk)
+    if (!dbManager.isOpen()) throw new Error('No library open')
+
     const BATCH_SIZE = 100
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
       if (mainWindow.isDestroyed()) return { success: false, count: 0 }
@@ -63,7 +138,6 @@ export function setupIPC(mainWindow: BrowserWindow) {
       await new Promise((resolve) => setImmediate(resolve))
     }
 
-    // Phase 2: Processing Queue
     return await processQueue(mainWindow)
   })
 
@@ -74,16 +148,19 @@ export function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle(
     'db:getImages',
     async (_, limit?: number, offset?: number, sortBy?: string, order?: 'asc' | 'desc') => {
+      if (!dbManager.isOpen()) return []
       return await getAllImages.all(limit, offset, sortBy, order)
     }
   )
 
   ipcMain.handle('db:getImageCount', async () => {
+    if (!dbManager.isOpen()) return 0
     const { getImageCount } = await import('./db')
     return await getImageCount.get()
   })
 
   ipcMain.handle('db:getTags', async () => {
+    if (!dbManager.isOpen()) return []
     return await getAllTags.all()
   })
 
@@ -97,17 +174,20 @@ export function setupIPC(mainWindow: BrowserWindow) {
       sortBy?: string,
       order?: 'asc' | 'desc'
     ) => {
+      if (!dbManager.isOpen()) return []
       const { getImagesByTags } = await import('./db')
       return await getImagesByTags.get({ tagNames, limit, offset, sortBy, order })
     }
   )
 
   ipcMain.handle('db:getImagesByTagsCount', async (_, tagNames: string[]) => {
+    if (!dbManager.isOpen()) return 0
     const { getImagesByTagsCount } = await import('./db')
     return await getImagesByTagsCount.get({ tagNames })
   })
 
   ipcMain.handle('db:clear', async () => {
+    if (!dbManager.isOpen()) return false
     await clearDatabase.run()
     return true
   })
@@ -130,6 +210,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('settings:get', async () => {
+    if (!dbManager.isOpen()) return { threadCount: 2, language: 'en' }
     const settings = await getSettings.get()
     setTargetThreads(settings.threadCount)
     return settings
@@ -143,18 +224,20 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('lib:rescan', async () => {
+    if (!dbManager.isOpen()) return { success: false }
     const res = await syncLibrary.run(mainWindow)
     await resetProcessed.run()
-    // Start processing queue in background
     processQueue(mainWindow)
     return { success: true, removedCount: res.removed, addedCount: res.added }
   })
 
   ipcMain.handle('lib:sync', async (_, options?: { skipScan?: boolean; skipCleanup?: boolean }) => {
+    if (!dbManager.isOpen()) return { added: 0, removed: 0 }
     return await syncLibrary.run(mainWindow, options)
   })
 
   ipcMain.handle('lib:cleanup', async () => {
+    if (!dbManager.isOpen()) return { added: 0, removed: 0 }
     return await syncLibrary.run(mainWindow, { skipScan: true, skipCleanup: false })
   })
 
@@ -169,12 +252,8 @@ export function setupIPC(mainWindow: BrowserWindow) {
     return null
   })
 
-  // Trigger one-time backfill on startup if needed (called from renderer or just exposes it)
-  // For now we can just run it once at startup or via a manual trigger.
-  // Let's explicitly call it when setupIPC is done or expose it.
-  // Since this might take time, let's just expose it for now or rely on the fact that scanning triggers it? No.
-  // Let's add an explicit IPC to trigger maintenance tasks.
   ipcMain.handle('db:maintenance:fixDates', async () => {
+    if (!dbManager.isOpen()) return { count: 0 }
     console.log('[IPC] Starting date backfill...')
     const result = await backfillFileDates.run()
     console.log(`[IPC] Date backfill completed: ${result.count} updated.`)
@@ -201,6 +280,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('db:getTagGroups', async () => {
+    if (!dbManager.isOpen()) return []
     return await getAllTagGroups.get()
   })
 

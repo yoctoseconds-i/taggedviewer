@@ -30,6 +30,8 @@ interface SidebarProps {
   onGroupClick: (group: TagGroup) => void
   onCreateGroup: () => void
   onEditGroup: (group: TagGroup) => void
+  libraryPath: string | null
+  onOpenLibrary: () => void
 }
 
 export const Sidebar = ({
@@ -49,6 +51,8 @@ export const Sidebar = ({
   onGroupClick,
   onCreateGroup,
   onEditGroup,
+  libraryPath,
+  onOpenLibrary,
 }: SidebarProps) => {
   const { t } = useTranslation()
   const favoriteTags = tags.filter((t) => t.is_favorite && (!t.is_hidden || showHidden))
@@ -118,10 +122,22 @@ export const Sidebar = ({
   return (
     <nav className="w-64 border-r border-gray-800 flex flex-col bg-gray-950">
       <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/50 shrink-0">
-        <h1 className="text-sm font-black tracking-tighter text-white uppercase italic">
-          Tagged<span className="text-indigo-500">Viewer</span>
-        </h1>
-        <div className="flex items-center space-x-1">
+        <div className="flex flex-col min-w-0 mr-2">
+          <h1 className="text-sm font-black tracking-tighter text-white uppercase italic truncate">
+            Tagged<span className="text-indigo-500">Viewer</span>
+          </h1>
+          <button
+            onClick={onOpenLibrary}
+            className="text-[10px] text-gray-500 hover:text-indigo-400 truncate text-left transition-colors flex items-center gap-1"
+            title={libraryPath || 'No Library Open'}
+          >
+            <Layers className="w-3 h-3 shrink-0" />
+            <span className="truncate">
+              {libraryPath ? libraryPath.split(/[\\/]/).pop() : 'Open Library'}
+            </span>
+          </button>
+        </div>
+        <div className="flex items-center space-x-1 shrink-0">
           <button
             onClick={onToggleSort}
             className="p-1.5 text-gray-500 hover:text-indigo-400 disabled:opacity-50 transition-colors"

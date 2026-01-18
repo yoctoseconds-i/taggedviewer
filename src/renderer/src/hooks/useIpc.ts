@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Image, Tag } from '../types'
 
 export const useIpc = (loadData: () => void) => {
@@ -116,20 +116,25 @@ export const useIpc = (loadData: () => void) => {
     loadData()
   }
 
-  const setLibraryPath = async () => {
+  const openLibrary = useCallback(async () => {
     // @ts-ignore
-    const dir = await window.electron.ipcRenderer.invoke('dialog:openDirectory')
-    if (dir) {
-      // @ts-ignore
-      const currentSettings = await window.electron.ipcRenderer.invoke('settings:get')
-      const newSettings = { ...currentSettings, libraryPath: dir }
-      // @ts-ignore
-      await window.electron.ipcRenderer.invoke('settings:set', newSettings)
-      loadData()
-      return newSettings
-    }
-    return null
-  }
+    return await window.electron.ipcRenderer.invoke('lib:open')
+  }, [])
+
+  const switchLibrary = useCallback(async (path: string) => {
+    // @ts-ignore
+    return await window.electron.ipcRenderer.invoke('lib:switch', path)
+  }, [])
+
+  const getRecentLibraries = useCallback(async () => {
+    // @ts-ignore
+    return (await window.electron.ipcRenderer.invoke('lib:getRecent')) as string[]
+  }, [])
+
+  const getCurrentLibrary = useCallback(async () => {
+    // @ts-ignore
+    return (await window.electron.ipcRenderer.invoke('lib:current')) as string | null
+  }, [])
 
   return {
     isScanning,
@@ -141,10 +146,14 @@ export const useIpc = (loadData: () => void) => {
     showItemInFolder,
     clearLibrary,
     checkForUpdates,
-    setLibraryPath,
+
     syncLibrary,
     version,
     updateStatus,
     rescanLibrary,
+    openLibrary,
+    switchLibrary,
+    getRecentLibraries,
+    getCurrentLibrary,
   }
 }
