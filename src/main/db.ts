@@ -624,6 +624,13 @@ export const getAllTagGroups = {
   },
 }
 
+let isSyncAborted = false
+
+export const abortSync = () => {
+  isSyncAborted = true
+  console.log('[DB] Library sync abortion requested.')
+}
+
 export const syncLibrary = {
   run: async (mainWindow?: any, options: { skipScan?: boolean; skipCleanup?: boolean } = {}) => {
     // With library switching, we just sync the current OPEN library
@@ -637,6 +644,7 @@ export const syncLibrary = {
     let filePaths = new Set<string>()
 
     if (!options.skipScan) {
+      isSyncAborted = false // Reset at start
       console.log(`[DB] Starting library sync for: ${libPath}`)
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('scan:start')
@@ -655,6 +663,10 @@ export const syncLibrary = {
     // 1. Find and add new files
     const BATCH_SIZE = 100
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      if (isSyncAborted) {
+        console.log('[DB] Sync aborted during add phase.')
+        break
+      }
       if (mainWindow && mainWindow.isDestroyed()) break
       const batch = files.slice(i, i + BATCH_SIZE)
       const batchPaths = batch.map((f: any) => f.path)
@@ -711,6 +723,10 @@ export const syncLibrary = {
     if (toDelete.length > 0) {
       console.log(`[DB] Sync: Removing ${toDelete.length} missing files in scope.`)
       for (let i = 0; i < toDelete.length; i++) {
+        if (isSyncAborted) {
+          console.log('[DB] Sync aborted during cleanup phase.')
+          break
+        }
         if (mainWindow && mainWindow.isDestroyed()) break
         await deleteImageByPath.run({ filepath: toDelete[i] })
         removedCount++

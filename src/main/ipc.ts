@@ -233,7 +233,26 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('db:clear', async () => {
     if (!dbManager.isOpen()) return false
+    console.log('[IPC] Database clear requested. Stopping background tasks...')
+
+    // 1. Stop components
+    watcherService.stop()
+    stopQueue()
+    const { abortSync } = await import('./db')
+    abortSync()
+
+    // 2. Wait a little for loops to yield/break
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // 3. Clear database
     await clearDatabase.run()
+
+    // 4. Notify UI to reset progress states
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('scan:complete')
+    }
+
+    console.log('[IPC] Database cleared.')
     return true
   })
 
