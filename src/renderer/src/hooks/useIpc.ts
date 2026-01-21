@@ -27,6 +27,17 @@ export const useIpc = (loadData: () => void) => {
     )
 
     // @ts-ignore
+    window.electron.ipcRenderer.on('scan:start', () => {
+      setIsScanning(true)
+    })
+
+    // @ts-ignore
+    window.electron.ipcRenderer.on('scan:complete', () => {
+      setIsScanning(false)
+      loadData()
+    })
+
+    // @ts-ignore
     window.electron.ipcRenderer.on('app:update-available', (_, info) => {
       setUpdateStatus({ available: true, info, checking: false })
     })
@@ -50,6 +61,10 @@ export const useIpc = (loadData: () => void) => {
       window.electron.ipcRenderer.removeAllListeners('app:update-available')
       // @ts-ignore
       window.electron.ipcRenderer.removeAllListeners('app:update-not-available')
+      // @ts-ignore
+      window.electron.ipcRenderer.removeAllListeners('scan:start')
+      // @ts-ignore
+      window.electron.ipcRenderer.removeAllListeners('scan:complete')
     }
   }, [loadData])
 

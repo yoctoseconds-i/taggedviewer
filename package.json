@@ -20,7 +20,9 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
+    "@types/chokidar": "^1.7.5",
     "better-sqlite3": "^12.5.0",
+    "chokidar": "^5.0.0",
     "clsx": "^2.0.0",
     "electron-updater": "6.6.2",
     "i18next": "^25.7.4",

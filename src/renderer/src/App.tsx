@@ -195,6 +195,13 @@ function App(): JSX.Element {
     await window.electron.ipcRenderer.invoke('settings:set', newSettings)
   }
 
+  const handleUpdateWatch = async (enabled: boolean) => {
+    const newSettings = { ...settings, watchEnabled: enabled }
+    setSettings(newSettings)
+    // @ts-ignore
+    await window.electron.ipcRenderer.invoke('settings:set', newSettings)
+  }
+
   const handleTagClick = (tagName: string | null) => {
     if (!tagName) {
       setSelectedTags([])
@@ -362,6 +369,7 @@ function App(): JSX.Element {
         settings={settings}
         onUpdateThreadCount={handleUpdateThreadCount}
         onUpdateLanguage={handleUpdateLanguage}
+        onUpdateWatch={handleUpdateWatch}
         onRescan={rescanLibrary}
         onSync={syncLibrary}
         onClear={clearLibrary}

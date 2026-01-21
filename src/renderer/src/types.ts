@@ -30,4 +30,5 @@ export interface Settings {
   threadCount: number
   language?: string
   libraryPath?: string
+  watchEnabled?: boolean
 }

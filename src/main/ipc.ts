@@ -21,19 +21,62 @@ import dbManager, {
 } from './db'
 import { processQueue, setTargetThreads } from './services/QueueService'
 import { globalSettings } from './GlobalSettings'
+import { watcherService } from './services/WatcherService'
 
 export function setupIPC(mainWindow: BrowserWindow) {
   // Initialization: Try to migrate or open last library
+  watcherService.setMainWindow(mainWindow)
+
+  const checkAutoSync = async (libPath: string) => {
+    console.log(`[AutoSync] Checking for ${libPath}...`)
+    try {
+      const settings = await getSettings.get()
+      console.log(`[AutoSync] Settings: watchEnabled=${settings.watchEnabled}`)
+      if (settings.watchEnabled) {
+        console.log(`[AutoSync] Enabled for ${libPath}, starting sync and watch...`)
+        const startSync = () => {
+          console.log(`[AutoSync] Starting sync for ${libPath}...`)
+          syncLibrary
+            .run(mainWindow)
+            .then((res) => {
+              console.log(
+                `[AutoSync] Background sync completed. Added: ${res.added}, Removed: ${res.removed}`
+              )
+              if (res.added > 0) processQueue(mainWindow)
+            })
+            .catch((err) => {
+              console.error(`[AutoSync] Background sync failed:`, err)
+            })
+        }
+
+        if (mainWindow.webContents.isLoading()) {
+          console.log(`[AutoSync] Window loading, waiting for did-finish-load...`)
+          mainWindow.webContents.once('did-finish-load', startSync)
+        } else {
+          startSync()
+        }
+        watcherService.start(libPath)
+      } else {
+        console.log(`[AutoSync] Disabled.`)
+        watcherService.stop()
+      }
+    } catch (e) {
+      console.error('[AutoSync] Error checking auto sync:', e)
+    }
+  }
+
   try {
     const migratedPath = dbManager.tryMigrateLegacy()
     if (migratedPath) {
       globalSettings.addRecentLibrary(migratedPath)
       dbManager.connect(migratedPath)
+      checkAutoSync(migratedPath)
     } else {
       const lastLib = globalSettings.lastOpenLibrary
       if (lastLib) {
         try {
           dbManager.connect(lastLib)
+          checkAutoSync(lastLib)
         } catch (e) {
           console.error(`Failed to connect to last library: ${lastLib}`, e)
           globalSettings.setLastOpenLibrary(null)
@@ -56,6 +99,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
     try {
       dbManager.connect(libPath)
       globalSettings.addRecentLibrary(libPath)
+      checkAutoSync(libPath)
       // Reload UI to refresh everything
       mainWindow.reload()
       return libPath
@@ -69,6 +113,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
     try {
       dbManager.connect(libPath)
       globalSettings.addRecentLibrary(libPath)
+      checkAutoSync(libPath)
       mainWindow.reload()
       return true
     } catch (e) {
@@ -220,7 +265,19 @@ export function setupIPC(mainWindow: BrowserWindow) {
     if (settings.threadCount !== undefined) {
       setTargetThreads(settings.threadCount)
     }
-    return await updateSettings.run(settings)
+    const newSettings = await updateSettings.run(settings)
+
+    // Handle watcher toggle
+    if (settings.watchEnabled !== undefined) {
+      if (settings.watchEnabled) {
+        const libPath = dbManager.getCurrentLibraryPath()
+        if (libPath) watcherService.start(libPath)
+      } else {
+        watcherService.stop()
+      }
+    }
+
+    return newSettings
   })
 
   ipcMain.handle('lib:rescan', async () => {
@@ -233,7 +290,12 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('lib:sync', async (_, options?: { skipScan?: boolean; skipCleanup?: boolean }) => {
     if (!dbManager.isOpen()) return { added: 0, removed: 0 }
-    return await syncLibrary.run(mainWindow, options)
+    if (!dbManager.isOpen()) return { added: 0, removed: 0 }
+    const res = await syncLibrary.run(mainWindow, options)
+    if (res.added > 0) {
+      processQueue(mainWindow)
+    }
+    return res
   })
 
   ipcMain.handle('lib:cleanup', async () => {

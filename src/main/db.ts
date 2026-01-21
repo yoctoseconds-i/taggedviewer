@@ -41,6 +41,7 @@ export interface Settings {
   // but we might keep it for legacy reasons or UI logic, but it's redundant
   // as the db IS in the library path.
   libraryPath?: string
+  watchEnabled?: boolean
 }
 
 const getUserDataPath = () => {
@@ -510,10 +511,14 @@ export const getSettings = {
       .get('threadCount') as any
     const langRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('language') as any
     const libRow = db.prepare('SELECT value FROM settings WHERE key = ?').get('libraryPath') as any
+    const watchRow = db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get('watchEnabled') as any
     const settings: Settings = {
       threadCount: threadRow ? JSON.parse(threadRow.value) : 2,
       language: langRow ? JSON.parse(langRow.value) : 'en',
       libraryPath: libRow ? JSON.parse(libRow.value) : undefined,
+      watchEnabled: watchRow ? JSON.parse(watchRow.value) : false,
     }
     return settings
   },
@@ -538,6 +543,12 @@ export const updateSettings = {
       db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
         'libraryPath',
         JSON.stringify(settings.libraryPath)
+      )
+    }
+    if (settings.watchEnabled !== undefined) {
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
+        'watchEnabled',
+        JSON.stringify(settings.watchEnabled)
       )
     }
     return getSettings.get()
@@ -627,7 +638,12 @@ export const syncLibrary = {
 
     if (!options.skipScan) {
       console.log(`[DB] Starting library sync for: ${libPath}`)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('scan:start')
+      }
+
       files = await scanDirectory(libPath)
+      console.log(`[DB] Scanned ${files.length} files.`)
       filePaths = new Set(files.map((f: any) => f.path))
     }
 
@@ -660,11 +676,14 @@ export const syncLibrary = {
         })
       }
 
-      await new Promise((resolve) => setImmediate(resolve))
+      await new Promise((resolve) => setTimeout(resolve, 10))
     }
 
     if (options.skipCleanup) {
       console.log(`[DB] Library sync (partial) completed. Added: ${addedCount}`)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('scan:complete')
+      }
       return { added: addedCount, removed: 0 }
     }
 
@@ -697,12 +716,17 @@ export const syncLibrary = {
         removedCount++
 
         if (i % 50 === 0) {
-          await new Promise((resolve) => setImmediate(resolve))
+          await new Promise((resolve) => setTimeout(resolve, 10))
         }
       }
     }
 
     console.log(`[DB] Library sync completed. Added: ${addedCount}, Removed: ${removedCount}`)
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('scan:complete')
+    }
+
     return { added: addedCount, removed: removedCount }
   },
 }

@@ -19,6 +19,7 @@ interface SettingsModalProps {
   settings: Settings
   onUpdateThreadCount: (count: number) => void
   onUpdateLanguage: (lang: string) => void
+  onUpdateWatch: (enabled: boolean) => void
   onRescan: () => void
   onSync: () => void
   onClear: () => void
@@ -34,6 +35,7 @@ export const SettingsModal = ({
   settings,
   onUpdateThreadCount,
   onUpdateLanguage,
+  onUpdateWatch,
   onRescan,
   onSync,
   onClear,
@@ -159,11 +161,25 @@ export const SettingsModal = ({
                     {settings.libraryPath || 'No directory selected'}
                   </p>
                 </div>
-                <div className="flex items-start gap-2">
-                  <FolderSync className="w-3 h-3 text-indigo-500/50 mt-0.5" />
-                  <p className="text-[9px] text-gray-500 leading-tight">
-                    {t('settings.autoSyncDesc')}
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-2">
+                    <FolderSync className="w-3 h-3 text-indigo-500/50 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-300">{t('settings.autoSync')}</p>
+                      <p className="text-[9px] text-gray-500 leading-tight">
+                        {t('settings.autoSyncDesc')}
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={settings.watchEnabled || false}
+                      onChange={(e) => onUpdateWatch(e.target.checked)}
+                    />
+                    <div className="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
                 </div>
               </div>
 
