@@ -19,9 +19,19 @@ import dbManager, {
   createTagGroup,
   updateTagGroup,
 } from './db'
-import { processQueue, setTargetThreads } from './services/QueueService'
+import { processQueue, setTargetThreads, stopQueue } from './services/QueueService'
 import { globalSettings } from './GlobalSettings'
 import { watcherService } from './services/WatcherService'
+
+async function stopBackgroundTasks() {
+  console.log('[IPC] Stopping all background tasks...')
+  watcherService.stop()
+  stopQueue()
+  const { abortSync } = await import('./db')
+  abortSync()
+  // Wait a little for loops to yield
+  await new Promise((resolve) => setTimeout(resolve, 100))
+}
 
 export function setupIPC(mainWindow: BrowserWindow) {
   // Initialization: Try to migrate or open last library
@@ -97,6 +107,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
     const libPath = filePaths[0]
     try {
+      await stopBackgroundTasks()
       dbManager.connect(libPath)
       globalSettings.addRecentLibrary(libPath)
       checkAutoSync(libPath)
@@ -111,6 +122,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('lib:switch', async (_, libPath: string) => {
     try {
+      await stopBackgroundTasks()
       dbManager.connect(libPath)
       globalSettings.addRecentLibrary(libPath)
       checkAutoSync(libPath)
@@ -236,15 +248,9 @@ export function setupIPC(mainWindow: BrowserWindow) {
     console.log('[IPC] Database clear requested. Stopping background tasks...')
 
     // 1. Stop components
-    watcherService.stop()
-    stopQueue()
-    const { abortSync } = await import('./db')
-    abortSync()
+    await stopBackgroundTasks()
 
-    // 2. Wait a little for loops to yield/break
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // 3. Clear database
+    // 2. Clear database
     await clearDatabase.run()
 
     // 4. Notify UI to reset progress states
