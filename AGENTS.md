@@ -63,3 +63,5 @@
 - **CIでのLint**: CIはLintの警告やエラーが一つでもあると失敗します（`--max-warnings 0`）。必ずローカルで問題を解決してください。
 - **Effect内のAsync/Await**: `useEffect` 内では、自己実行非同期関数を適切に使用してください。
 - **Prettier**: "Delete CR" や奇妙なフォーマットエラーが発生した場合は、`npm run lint -- --fix` または `npm run format` を実行してください。
+- **SQLite LIKE句とWindowsパス**: Windows環境のパス（バックスラッシュを含む）をSQLiteの `LIKE` 句で検索する場合、`ESCAPE` 指定子を使用する際はバックスラッシュ自体もエスケープする必要があります。
+  - 例: `filepath LIKE ? ESCAPE '\'` を使う場合、検索パターンの `\` を `\\` に置換する必要があります。これを怠ると、Windowsのパス区切り文字がエスケープ文字として誤認され、検索に失敗します。

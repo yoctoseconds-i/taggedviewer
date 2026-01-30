@@ -700,7 +700,7 @@ export const syncLibrary = {
     }
 
     // 2. Remove missing files (scope: everything in current library path)
-    const escapeLike = (str: string) => str.replace(/[%_]/g, '\\$&')
+    const escapeLike = (str: string) => str.replace(/[\\%_]/g, '\\$&')
     const pattern = escapeLike(libPath) + '%'
     // We strictly only manage files INSIDE the library path now
     const imagesInScope = db
