@@ -22,21 +22,19 @@ vi.mock('react-i18next', () => ({
 describe('Sidebar', () => {
   const defaultProps = {
     tags: [
-      { id: 1, name: 'tag1', count: 10, is_favorite: true },
-      { id: 2, name: 'tag2', count: 5, is_favorite: false },
+      { id: 1, name: 'tag1', count: 10, is_favorite: true, is_hidden: false },
+      { id: 2, name: 'tag2', count: 5, is_favorite: false, is_hidden: false },
     ],
     activeTags: [],
     onTagClick: vi.fn(),
-    tagSort: 'name' as const,
     onToggleSort: vi.fn(),
     onOpenSettings: vi.fn(),
+    showHidden: false,
+    onToggleShowHidden: vi.fn(),
+    onToggleHidden: vi.fn(),
     tagSearchTerm: '',
     onSearchChange: vi.fn(),
     onToggleFavorite: vi.fn(),
-    onUpdateLanguage: vi.fn(),
-    onSync: vi.fn(),
-    onSelectLibrary: vi.fn(),
-    onClearDatabase: vi.fn(),
     tagGroups: [],
     onGroupClick: vi.fn(),
     onCreateGroup: vi.fn(),
@@ -47,20 +45,15 @@ describe('Sidebar', () => {
 
   it('renders favorite tags in a separate section', () => {
     render(<Sidebar {...defaultProps} />)
-    expect(screen.getByText('sidebar.favorites')).toBeInTheDocument()
+    const favoriteSectionHeader = screen.getByText('sidebar.favorites')
+    expect(favoriteSectionHeader).toBeInTheDocument()
     expect(screen.getByText('sidebar.tags')).toBeInTheDocument()
   })
 
   it('renders a star button to toggle favorites', () => {
     render(<Sidebar {...defaultProps} />)
-    // Find all star buttons. There should be one for each tag.
-    const starButtons = screen
-      .getAllByRole('button')
-      .filter(
-        (btn) =>
-          btn.querySelector('svg.lucide-star') ||
-          btn.getAttribute('aria-label')?.includes('favorite')
-      )
+    // Find buttons by aria-label
+    const starButtons = screen.getAllByRole('button', { name: /favorite/i })
     expect(starButtons.length).toBeGreaterThan(0)
   })
 

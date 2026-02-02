@@ -48,19 +48,14 @@ function App(): JSX.Element {
 
   const loadData = useCallback(
     async (isInitial = false, offsetOverride?: number) => {
-      // Determine if we should block.
-      // If it's a "load more" (not initial), block if already loading.
-      // If it's initial, we allow it (effectively canceling the visual effect of previous loads by replacing data)
-      // Ideally we would cancel the previous promise, but for now we just allow the new one to run.
       if (loadingRef.current && !isInitial) return
-
       loadingRef.current = true
 
       try {
         const limit = 100
         const offset = offsetOverride ?? 0
 
-        let imgs // ...
+        let imgs
         if (selectedTags.length > 0) {
           // @ts-ignore
           imgs = await window.electron.ipcRenderer.invoke(
@@ -144,13 +139,11 @@ function App(): JSX.Element {
       // @ts-ignore
       await window.electron.ipcRenderer.invoke('scan:resume')
       setIsScanning(false)
-      loadData(true, 0)
       setLibraryPathStr(await getCurrentLibrary())
-      loadData(true, 0)
       loadTagGroups()
     }
     init()
-  }, [setIsScanning, loadData, loadTagGroups, i18n, getCurrentLibrary])
+  }, [setIsScanning, loadTagGroups, i18n, getCurrentLibrary])
 
   useEffect(() => {
     setImages([])

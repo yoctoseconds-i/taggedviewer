@@ -251,15 +251,35 @@ export const ImageViewer = ({
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar bg-black/50 rounded-xl p-4 border border-white/5">
-              <pre className="text-gray-300 text-sm whitespace-pre-wrap font-mono leading-relaxed">
-                {JSON.stringify(metadata.text, null, 2)}
-              </pre>
+              <div className="text-gray-300 text-sm font-mono leading-relaxed space-y-4">
+                {Object.entries(metadata.text).map(([key, value]) => (
+                  <div key={key} className="group">
+                    <div className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1 opacity-70">
+                      {key}
+                    </div>
+                    <pre className="whitespace-pre-wrap break-all">
+                      {typeof value === 'string'
+                        ? value.replace(/\\n/g, '\n')
+                        : JSON.stringify(value, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(JSON.stringify(metadata.text))
+                  const textToCopy = Object.entries(metadata.text)
+                    .map(([key, value]) => {
+                      const formattedValue =
+                        typeof value === 'string'
+                          ? value.replace(/\\n/g, '\n')
+                          : JSON.stringify(value, null, 2)
+                      return `${key}:\n${formattedValue}`
+                    })
+                    .join('\n\n')
+                  navigator.clipboard.writeText(textToCopy)
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm transition-all"
               >

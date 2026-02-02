@@ -1,4 +1,4 @@
-import chokidar from 'chokidar'
+import { watch, FSWatcher } from 'chokidar'
 import { BrowserWindow } from 'electron'
 import { insertImagesBulk, deleteImageByPath } from '../db'
 import { processQueue } from './QueueService'
@@ -7,7 +7,7 @@ import { extname } from 'path'
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'])
 
 class WatcherService {
-  private watcher: chokidar.FSWatcher | null = null
+  private watcher: FSWatcher | null = null
   private mainWindow: BrowserWindow | null = null
   private addBuffer: Set<string> = new Set()
   private removeBuffer: Set<string> = new Set()
@@ -21,7 +21,7 @@ class WatcherService {
     await this.stop()
     console.log(`[Watcher] Starting watch on ${dirPath}`)
 
-    this.watcher = chokidar.watch(dirPath, {
+    this.watcher = watch(dirPath, {
       ignored: /(^|[\/\\])\../, // ignore dotfiles
       persistent: true,
       ignoreInitial: true,

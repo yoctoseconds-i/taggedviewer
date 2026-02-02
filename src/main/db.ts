@@ -99,9 +99,16 @@ class DatabaseManager {
     this.initSchema()
 
     // Ensure we have libraryPath set in settings for consistency
-    const currentSettings = getSettings.get()
-    if (currentSettings.libraryPath !== libraryPath) {
-      updateSettings.run({ libraryPath })
+    // Ensure we have libraryPath set in settings for consistency
+    // Use raw DB for this check to stay synchronous in connect()
+    const stmt = this._db.prepare('SELECT value FROM settings WHERE key = ?')
+    const row = stmt.get('libraryPath')
+    const currentPath = row ? JSON.parse(row.value) : null
+
+    if (currentPath !== libraryPath) {
+      this._db
+        .prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
+        .run('libraryPath', JSON.stringify(libraryPath))
     }
   }
 
@@ -160,6 +167,7 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_image_tags_composite ON image_tags(tag_id, image_id);
       CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
       CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_image_tags_image_id ON image_tags(image_id);
       
       CREATE TABLE IF NOT EXISTS tag_groups (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -336,10 +344,8 @@ export const getAllTags = {
     return dbManager.db
       .prepare(
         `
-      SELECT t.*, COUNT(it.image_id) as count
+      SELECT t.*, (SELECT COUNT(*) FROM image_tags it WHERE it.tag_id = t.id) as count
       FROM tags t
-      LEFT JOIN image_tags it ON t.id = it.tag_id
-      GROUP BY t.id
       ORDER BY t.is_hidden ASC, t.name ASC
     `
       )

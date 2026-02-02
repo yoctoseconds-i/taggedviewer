@@ -128,4 +128,37 @@ describe('ImageViewer', () => {
     expect(screen.getByText('viewer.promptTitle')).toBeInTheDocument()
     expect(screen.getByText(/test prompt/)).toBeInTheDocument()
   })
+
+  it('handles multiline prompt and replaces \\n with actual newline', async () => {
+    // Override mock to return multiline prompt
+    global.window.electron.ipcRenderer.invoke = vi.fn().mockResolvedValue({
+      text: { parameters: 'prompt line 1\\nprompt line 2' },
+    })
+
+    render(
+      <ImageViewer
+        image={mockImage}
+        tags={mockTags}
+        onClose={onClose}
+        onOpenFolder={onOpenFolder}
+        onToggleFavorite={onToggleFavorite}
+        onTagClick={onTagClick}
+      />
+    )
+
+    // Open detail pane
+    const mainArea = document.querySelector('.flex-1.flex.items-center.justify-center')
+    if (mainArea) fireEvent.click(mainArea)
+
+    await waitFor(() => {
+      expect(screen.getByText('viewer.showPrompt')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('viewer.showPrompt'))
+
+    // The text should contain an actual newline instead of \n literal
+    const promptElement = screen.getByText(/prompt line 1/)
+    expect(promptElement.textContent).toContain('prompt line 1\nprompt line 2')
+    expect(promptElement.textContent).not.toContain('\\n')
+  })
 })

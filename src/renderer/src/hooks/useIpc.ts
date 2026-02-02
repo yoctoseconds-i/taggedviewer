@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
 import { Image, Tag } from '../types'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 export const useIpc = (loadData: () => void) => {
   const [isScanning, setIsScanning] = useState(false)
@@ -13,6 +13,7 @@ export const useIpc = (loadData: () => void) => {
     available: false,
     checking: false,
   })
+  const lastReloadRef = useRef<number>(0)
 
   useEffect(() => {
     // @ts-ignore
@@ -21,8 +22,13 @@ export const useIpc = (loadData: () => void) => {
       (_, data: { total: number; current: number; image?: Image; tags?: Tag[] }) => {
         setScanProgress({ total: data.total, current: data.current })
         setIsScanning(data.current < data.total)
-        // Always reload data to show progress (Phase 1: new items, Phase 2: processed status)
-        loadData()
+
+        // Throttle data reload during scan
+        const now = Date.now()
+        if (now - lastReloadRef.current > 500 || data.current === data.total) {
+          lastReloadRef.current = now
+          loadData()
+        }
       }
     )
 
