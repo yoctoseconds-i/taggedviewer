@@ -94,5 +94,21 @@
     "includeLabel": "Include Tags",
     "searchPlaceholder": "Search tags to add...",
     "noTagsFound": "No tags found matching"
+  },
+  "slideshow": {
+    "start": "Start Slideshow",
+    "play": "Play",
+    "pause": "Pause",
+    "prev": "Previous",
+    "next": "Next",
+    "order": "Order",
+    "orderNormal": "Normal",
+    "orderRandom": "Random",
+    "interval": "Interval",
+    "loop": "Loop",
+    "loopOn": "Loop: On",
+    "loopOff": "Loop: Off",
+    "info": "Info",
+    "close": "Close"
   }
 }

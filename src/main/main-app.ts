@@ -3,7 +3,8 @@ import { join, normalize } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { setupIPC } from './ipc'
 import { pathToFileURL } from 'url'
-import { existsSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { createHash } from 'crypto'
 import { autoUpdater } from 'electron-updater'
 
 export function startMainApp() {
@@ -88,11 +89,26 @@ export function startMainApp() {
         }
 
         if (size === 'thumb') {
+          const hash = createHash('md5').update(filePath).digest('hex')
+          const cacheDir = join(app.getPath('userData'), 'thumbnails', hash.slice(0, 2))
+          const cachePath = join(cacheDir, `${hash}.jpg`)
+
+          if (existsSync(cachePath)) {
+            return net.fetch(pathToFileURL(cachePath).toString())
+          }
+
           const sharp = require('sharp')
           const buffer = await sharp(filePath)
             .resize(256, 256, { fit: 'cover', position: 'center' })
             .jpeg({ quality: 80 })
             .toBuffer()
+
+          try {
+            mkdirSync(cacheDir, { recursive: true })
+            writeFileSync(cachePath, buffer)
+          } catch (err) {
+            console.error('[Thumbnail Cache Error]', err)
+          }
 
           return new Response(buffer, {
             headers: { 'Content-Type': 'image/jpeg' },

@@ -98,5 +98,21 @@
     "includeLabel": "含めるタグ",
     "searchPlaceholder": "追加するタグを検索...",
     "noTagsFound": "見つかりませんでした: "
+  },
+  "slideshow": {
+    "start": "スライドショーを開始",
+    "play": "再生",
+    "pause": "一時停止",
+    "prev": "前へ",
+    "next": "次へ",
+    "order": "表示順",
+    "orderNormal": "通常",
+    "orderRandom": "ランダム",
+    "interval": "切り替え間隔",
+    "loop": "ループ",
+    "loopOn": "ループ: オン",
+    "loopOff": "ループ: オフ",
+    "info": "詳細情報",
+    "close": "閉じる"
   }
 }

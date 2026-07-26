@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell, app, nativeImage } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { scanDirectory } from './scanner'
 import dbManager, {
@@ -374,5 +374,12 @@ export function setupIPC(mainWindow: BrowserWindow) {
   ipcMain.handle('image:getMetadata', async (_, filepath: string) => {
     const { getImageMetadata } = await import('./services/MetadataService')
     return await getImageMetadata(filepath)
+  })
+
+  ipcMain.on('ondragstart', (event, filePath: string) => {
+    event.sender.startDrag({
+      file: filePath,
+      icon: nativeImage.createFromPath(filePath),
+    })
   })
 }

@@ -28,6 +28,12 @@ const ItemContainer = ({ children, ...props }: any) => (
 )
 
 export const ImageGrid = ({ images, onImageClick, loadMore, hasMore }: ImageGridProps) => {
+  const handleDragStart = (e: React.DragEvent, filepath: string) => {
+    e.preventDefault()
+    // @ts-ignore
+    window.electron.ipcRenderer.send('ondragstart', filepath)
+  }
+
   if (images.length === 0) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center text-gray-600 space-y-4 animate-in fade-in zoom-in duration-500">
@@ -61,6 +67,8 @@ export const ImageGrid = ({ images, onImageClick, loadMore, hasMore }: ImageGrid
         return (
           <div
             onClick={() => onImageClick(index)}
+            draggable="true"
+            onDragStart={(e) => handleDragStart(e, img.filepath)}
             className="w-full h-full relative group bg-gray-900 rounded-xl overflow-hidden cursor-pointer border border-gray-800 hover:border-indigo-500/50 shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 active:scale-95"
           >
             <img

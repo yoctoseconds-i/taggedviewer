@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { FolderOpen } from 'lucide-react'
+import { FolderOpen, Play } from 'lucide-react'
 import type { Image, Tag, Settings, TagGroup } from './types'
 import { useIpc } from './hooks/useIpc'
 import { useTranslation } from 'react-i18next'
@@ -10,6 +10,7 @@ import { Sidebar } from './components/Sidebar/Sidebar'
 import { TagGroupModal } from './components/TagGroupModal/TagGroupModal'
 import { ImageGrid } from './components/Gallery/ImageGrid'
 import { ImageViewer } from './components/Gallery/ImageViewer'
+import { Slideshow } from './components/Gallery/Slideshow'
 import { ScanningProgress } from './components/Gallery/ScanningProgress'
 import { SelectedTagsBar } from './components/Gallery/SelectedTagsBar'
 import { SortControl, SortKey, SortOrder } from './components/Gallery/SortControl'
@@ -20,6 +21,7 @@ function App(): JSX.Element {
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
+  const [slideshowStartIndex, setSlideshowStartIndex] = useState<number | null>(null)
   const [selectedImageTags, setSelectedImageTags] = useState<Tag[]>([])
   const [tagSort, setTagSort] = useState<'name' | 'count'>('count')
   const [tagSearchTerm, setTagSearchTerm] = useState('')
@@ -300,7 +302,17 @@ function App(): JSX.Element {
             onRemoveTag={(t) => handleTagClick(t)}
             onClearAll={() => setSelectedTags([])}
           />
-          <div className="ml-auto px-2">
+          <div className="ml-auto px-2 flex items-center gap-2">
+            {images.length > 0 && (
+              <button
+                onClick={() => setSlideshowStartIndex(0)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-indigo-500/10"
+                title={t('slideshow.start')}
+              >
+                <Play className="w-3 h-3 fill-white" />
+                <span>{t('slideshow.start')}</span>
+              </button>
+            )}
             <SortControl
               sortKey={sortKey}
               sortOrder={sortOrder}
@@ -352,6 +364,18 @@ function App(): JSX.Element {
             }}
             onPrev={selectedImageIndex > 0 ? handlePrev : undefined}
             onNext={selectedImageIndex < images.length - 1 || hasMore ? handleNext : undefined}
+          />
+        )}
+
+        {slideshowStartIndex !== null && (
+          <Slideshow
+            images={images}
+            startIndex={slideshowStartIndex}
+            onClose={() => setSlideshowStartIndex(null)}
+            onImageClick={(index) => {
+              setSlideshowStartIndex(null)
+              setSelectedImageIndex(index)
+            }}
           />
         )}
       </main>
