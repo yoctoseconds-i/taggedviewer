@@ -1,5 +1,18 @@
-import { ipcMain, dialog, BrowserWindow, shell, app, nativeImage } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell, app, nativeImage, net } from 'electron'
 import { autoUpdater } from 'electron-updater'
+
+function isVersionNewer(current: string, latest: string): boolean {
+  if (!current || !latest) return false
+  const cParts = current.replace(/^v/, '').split('.').map(Number)
+  const lParts = latest.replace(/^v/, '').split('.').map(Number)
+  for (let i = 0; i < Math.max(cParts.length, lParts.length); i++) {
+    const cVal = cParts[i] || 0
+    const lVal = lParts[i] || 0
+    if (lVal > cVal) return true
+    if (lVal < cVal) return false
+  }
+  return false
+}
 import { scanDirectory } from './scanner'
 import dbManager, {
   insertImagesBulk,
@@ -333,10 +346,53 @@ export function setupIPC(mainWindow: BrowserWindow) {
   })
 
   ipcMain.handle('app:checkForUpdates', async () => {
-    if (app.isPackaged) {
-      return await autoUpdater.checkForUpdatesAndNotify()
+    try {
+      if (app.isPackaged) {
+        const updateCheck = await autoUpdater.checkForUpdatesAndNotify()
+        if (updateCheck && updateCheck.updateInfo) {
+          return {
+            available: true,
+            version: updateCheck.updateInfo.version,
+            releaseNotes: updateCheck.updateInfo.releaseNotes,
+            releaseDate: updateCheck.updateInfo.releaseDate,
+            htmlUrl: 'https://github.com/rshkkngtm08/taggedviewer/releases',
+          }
+        }
+      }
+
+      // Fallback or dev mode: fetch via GitHub REST API
+      const response = await net.fetch(
+        'https://api.github.com/repos/rshkkngtm08/taggedviewer/releases/latest',
+        {
+          headers: { 'User-Agent': 'TaggedViewer-App' },
+        }
+      )
+      if (!response.ok) {
+        return { available: false }
+      }
+      const data = (await response.json()) as {
+        tag_name: string
+        name: string
+        body: string
+        html_url: string
+        published_at: string
+      }
+      const latestVersion = data.tag_name ? data.tag_name.replace(/^v/, '') : ''
+      const currentVersion = app.getVersion()
+
+      const isNewer = isVersionNewer(currentVersion, latestVersion)
+      return {
+        available: isNewer,
+        version: latestVersion,
+        releaseName: data.name,
+        releaseNotes: data.body,
+        releaseDate: data.published_at,
+        htmlUrl: data.html_url,
+      }
+    } catch (error) {
+      console.error('[IPC] Check for updates error:', error)
+      return { available: false, error: String(error) }
     }
-    return null
   })
 
   ipcMain.handle('db:maintenance:fixDates', async () => {

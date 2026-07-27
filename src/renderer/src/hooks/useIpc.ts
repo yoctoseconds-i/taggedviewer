@@ -1,19 +1,57 @@
 import { Image, Tag } from '../types'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
+export interface UpdateStatus {
+  available: boolean
+  version?: string
+  releaseName?: string
+  releaseNotes?: string
+  releaseDate?: string
+  htmlUrl?: string
+  info?: any
+  checking: boolean
+  dismissed?: boolean
+}
+
 export const useIpc = (loadData: () => void) => {
   const [isScanning, setIsScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 })
   const [version, setVersion] = useState<string>('')
-  const [updateStatus, setUpdateStatus] = useState<{
-    available: boolean
-    info?: any
-    checking: boolean
-  }>({
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({
     available: false,
     checking: false,
+    dismissed: false,
   })
   const lastReloadRef = useRef<number>(0)
+
+  const checkForUpdates = async () => {
+    setUpdateStatus((s) => ({ ...s, checking: true }))
+    try {
+      // @ts-ignore
+      const result = await window.electron.ipcRenderer.invoke('app:checkForUpdates')
+      if (result) {
+        setUpdateStatus({
+          available: !!result.available,
+          version: result.version,
+          releaseName: result.releaseName,
+          releaseNotes: result.releaseNotes,
+          releaseDate: result.releaseDate,
+          htmlUrl: result.htmlUrl || 'https://github.com/rshkkngtm08/taggedviewer/releases',
+          info: result,
+          checking: false,
+          dismissed: false,
+        })
+      } else {
+        setUpdateStatus((s) => ({ ...s, checking: false }))
+      }
+    } catch {
+      setUpdateStatus((s) => ({ ...s, checking: false }))
+    }
+  }
+
+  const dismissUpdate = () => {
+    setUpdateStatus((s) => ({ ...s, dismissed: true }))
+  }
 
   useEffect(() => {
     // @ts-ignore
@@ -45,20 +83,29 @@ export const useIpc = (loadData: () => void) => {
 
     // @ts-ignore
     window.electron.ipcRenderer.on('app:update-available', (_, info) => {
-      setUpdateStatus({ available: true, info, checking: false })
+      setUpdateStatus({
+        available: true,
+        version: info?.version,
+        releaseNotes: typeof info?.releaseNotes === 'string' ? info.releaseNotes : undefined,
+        info,
+        checking: false,
+        dismissed: false,
+      })
     })
 
     // @ts-ignore
     window.electron.ipcRenderer.on('app:update-not-available', () => {
-      setUpdateStatus({ available: false, checking: false })
+      setUpdateStatus({ available: false, checking: false, dismissed: false })
     })
 
-    const fetchVersion = async () => {
+    const init = async () => {
       // @ts-ignore
       const v = await window.electron.ipcRenderer.invoke('app:getVersion')
       setVersion(v)
+      // Check updates on startup
+      checkForUpdates()
     }
-    fetchVersion()
+    init()
 
     return () => {
       // @ts-ignore
@@ -73,12 +120,6 @@ export const useIpc = (loadData: () => void) => {
       window.electron.ipcRenderer.removeAllListeners('scan:complete')
     }
   }, [loadData])
-
-  const checkForUpdates = async () => {
-    setUpdateStatus((s) => ({ ...s, checking: true }))
-    // @ts-ignore
-    await window.electron.ipcRenderer.invoke('app:checkForUpdates')
-  }
 
   const openFolder = async () => {
     // @ts-ignore
@@ -171,6 +212,7 @@ export const useIpc = (loadData: () => void) => {
     syncLibrary,
     version,
     updateStatus,
+    dismissUpdate,
     rescanLibrary,
     openLibrary,
     switchLibrary,

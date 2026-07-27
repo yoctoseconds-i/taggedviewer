@@ -14,6 +14,7 @@ import { Slideshow } from './components/Gallery/Slideshow'
 import { ScanningProgress } from './components/Gallery/ScanningProgress'
 import { SelectedTagsBar } from './components/Gallery/SelectedTagsBar'
 import { SortControl, SortKey, SortOrder } from './components/Gallery/SortControl'
+import { UpdateNotification } from './components/UpdateNotification/UpdateNotification'
 
 function App(): JSX.Element {
   const { t, i18n } = useTranslation()
@@ -121,6 +122,7 @@ function App(): JSX.Element {
     syncLibrary,
     version,
     updateStatus,
+    dismissUpdate,
     checkForUpdates,
     openLibrary,
     getCurrentLibrary,
@@ -274,141 +276,144 @@ function App(): JSX.Element {
   }, [images.length, hasMore, loadData])
 
   return (
-    <div className="flex h-screen bg-black text-gray-100 overflow-hidden font-sans selection:bg-indigo-500/30">
-      <Sidebar
-        tags={filteredTags}
-        activeTags={selectedTags}
-        onTagClick={handleTagClick}
-        onToggleSort={() => setTagSort((prev) => (prev === 'name' ? 'count' : 'name'))}
-        onOpenSettings={() => setShowSettings(true)}
-        tagSearchTerm={tagSearchTerm}
-        onSearchChange={setTagSearchTerm}
-        onToggleFavorite={toggleFavorite}
-        showHidden={showHidden}
-        onToggleShowHidden={() => setShowHidden((prev) => !prev)}
-        onToggleHidden={toggleHidden}
-        tagGroups={tagGroups}
-        onGroupClick={handleGroupClick}
-        onCreateGroup={handleCreateGroup}
-        onEditGroup={handleEditGroup}
-        libraryPath={libraryPath}
-        onOpenLibrary={openLibrary}
-      />
+    <div className="flex flex-col h-screen bg-black text-gray-100 overflow-hidden font-sans selection:bg-indigo-500/30">
+      <UpdateNotification updateStatus={updateStatus} onDismiss={dismissUpdate} />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar
+          tags={filteredTags}
+          activeTags={selectedTags}
+          onTagClick={handleTagClick}
+          onToggleSort={() => setTagSort((prev) => (prev === 'name' ? 'count' : 'name'))}
+          onOpenSettings={() => setShowSettings(true)}
+          tagSearchTerm={tagSearchTerm}
+          onSearchChange={setTagSearchTerm}
+          onToggleFavorite={toggleFavorite}
+          showHidden={showHidden}
+          onToggleShowHidden={() => setShowHidden((prev) => !prev)}
+          onToggleHidden={toggleHidden}
+          tagGroups={tagGroups}
+          onGroupClick={handleGroupClick}
+          onCreateGroup={handleCreateGroup}
+          onEditGroup={handleEditGroup}
+          libraryPath={libraryPath}
+          onOpenLibrary={openLibrary}
+        />
 
-      <main className="flex-1 flex flex-col min-w-0 bg-gray-950/50 relative">
-        <div className="flex items-center justify-between p-2 pb-0">
-          <SelectedTagsBar
-            selectedTags={selectedTags}
-            onRemoveTag={(t) => handleTagClick(t)}
-            onClearAll={() => setSelectedTags([])}
-          />
-          <div className="ml-auto px-2 flex items-center gap-2">
-            {images.length > 0 && (
-              <button
-                onClick={() => setSlideshowStartIndex(0)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-indigo-500/10"
-                title={t('slideshow.start')}
-              >
-                <Play className="w-3 h-3 fill-white" />
-                <span>{t('slideshow.start')}</span>
-              </button>
-            )}
-            <SortControl
-              sortKey={sortKey}
-              sortOrder={sortOrder}
-              onSortChange={(k, o) => {
-                setSortKey(k)
-                setSortOrder(o)
+        <main className="flex-1 flex flex-col min-w-0 bg-gray-950/50 relative">
+          <div className="flex items-center justify-between p-2 pb-0">
+            <SelectedTagsBar
+              selectedTags={selectedTags}
+              onRemoveTag={(t) => handleTagClick(t)}
+              onClearAll={() => setSelectedTags([])}
+            />
+            <div className="ml-auto px-2 flex items-center gap-2">
+              {images.length > 0 && (
+                <button
+                  onClick={() => setSlideshowStartIndex(0)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-indigo-500/10"
+                  title={t('slideshow.start')}
+                >
+                  <Play className="w-3 h-3 fill-white" />
+                  <span>{t('slideshow.start')}</span>
+                </button>
+              )}
+              <SortControl
+                sortKey={sortKey}
+                sortOrder={sortOrder}
+                onSortChange={(k, o) => {
+                  setSortKey(k)
+                  setSortOrder(o)
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {images.length > 0 ? (
+              <ImageGrid
+                images={images}
+                onImageClick={setSelectedImageIndex}
+                loadMore={() => loadData(false, images.length)}
+                hasMore={hasMore}
+              />
+            ) : !isScanning ? (
+              <div className="flex-1 h-full flex flex-col items-center justify-center text-gray-500 space-y-4">
+                <FolderOpen className="w-16 h-16 text-gray-800" />
+                <div className="text-center">
+                  <p className="text-sm font-bold text-gray-400">{t('app.emptyLibrary')}</p>
+                  <button
+                    onClick={openFolder}
+                    className="mt-4 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
+                  >
+                    {t('app.selectFolder')}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {isScanning && (
+            <ScanningProgress current={scanProgress.current} total={scanProgress.total} />
+          )}
+
+          {selectedImageIndex !== null && images[selectedImageIndex] && (
+            <ImageViewer
+              image={images[selectedImageIndex]}
+              tags={selectedImageTags}
+              onClose={() => setSelectedImageIndex(null)}
+              onOpenFolder={showItemInFolder}
+              onToggleFavorite={toggleFavorite}
+              onTagClick={(name) => {
+                setSelectedTags([name])
+                setSelectedImageIndex(null)
+              }}
+              onPrev={selectedImageIndex > 0 ? handlePrev : undefined}
+              onNext={selectedImageIndex < images.length - 1 || hasMore ? handleNext : undefined}
+            />
+          )}
+
+          {slideshowStartIndex !== null && (
+            <Slideshow
+              images={images}
+              startIndex={slideshowStartIndex}
+              onClose={() => setSlideshowStartIndex(null)}
+              onImageClick={(index) => {
+                setSlideshowStartIndex(null)
+                setSelectedImageIndex(index)
               }}
             />
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {images.length > 0 ? (
-            <ImageGrid
-              images={images}
-              onImageClick={setSelectedImageIndex}
-              loadMore={() => loadData(false, images.length)}
-              hasMore={hasMore}
-            />
-          ) : !isScanning ? (
-            <div className="flex-1 h-full flex flex-col items-center justify-center text-gray-500 space-y-4">
-              <FolderOpen className="w-16 h-16 text-gray-800" />
-              <div className="text-center">
-                <p className="text-sm font-bold text-gray-400">{t('app.emptyLibrary')}</p>
-                <button
-                  onClick={openFolder}
-                  className="mt-4 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20"
-                >
-                  {t('app.selectFolder')}
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
+          )}
+        </main>
 
-        {isScanning && (
-          <ScanningProgress current={scanProgress.current} total={scanProgress.total} />
-        )}
+        <SettingsModal
+          show={showSettings}
+          onClose={() => setShowSettings(false)}
+          settings={settings}
+          onUpdateThreadCount={handleUpdateThreadCount}
+          onUpdateLanguage={handleUpdateLanguage}
+          onUpdateWatch={handleUpdateWatch}
+          onRescan={rescanLibrary}
+          onSync={syncLibrary}
+          onClear={clearLibrary}
+          version={version}
+          updateStatus={updateStatus}
+          onCheckForUpdates={checkForUpdates}
+          onSelectLibrary={async () => {
+            await openLibrary()
+          }}
+        />
 
-        {selectedImageIndex !== null && images[selectedImageIndex] && (
-          <ImageViewer
-            image={images[selectedImageIndex]}
-            tags={selectedImageTags}
-            onClose={() => setSelectedImageIndex(null)}
-            onOpenFolder={showItemInFolder}
-            onToggleFavorite={toggleFavorite}
-            onTagClick={(name) => {
-              setSelectedTags([name])
-              setSelectedImageIndex(null)
-            }}
-            onPrev={selectedImageIndex > 0 ? handlePrev : undefined}
-            onNext={selectedImageIndex < images.length - 1 || hasMore ? handleNext : undefined}
-          />
-        )}
-
-        {slideshowStartIndex !== null && (
-          <Slideshow
-            images={images}
-            startIndex={slideshowStartIndex}
-            onClose={() => setSlideshowStartIndex(null)}
-            onImageClick={(index) => {
-              setSlideshowStartIndex(null)
-              setSelectedImageIndex(index)
-            }}
-          />
-        )}
-      </main>
-
-      <SettingsModal
-        show={showSettings}
-        onClose={() => setShowSettings(false)}
-        settings={settings}
-        onUpdateThreadCount={handleUpdateThreadCount}
-        onUpdateLanguage={handleUpdateLanguage}
-        onUpdateWatch={handleUpdateWatch}
-        onRescan={rescanLibrary}
-        onSync={syncLibrary}
-        onClear={clearLibrary}
-        version={version}
-        updateStatus={updateStatus}
-        onCheckForUpdates={checkForUpdates}
-        onSelectLibrary={async () => {
-          await openLibrary()
-        }}
-      />
-
-      <TagGroupModal
-        isOpen={isGroupModalOpen}
-        onClose={() => setIsGroupModalOpen(false)}
-        groupToEdit={groupToEdit}
-        availableTags={tags}
-        initialTags={
-          groupToEdit ? groupToEdit.tags : tags.filter((t) => selectedTags.includes(t.name))
-        }
-        onSave={handleSaveGroup}
-        onDelete={handleDeleteGroup}
-      />
+        <TagGroupModal
+          isOpen={isGroupModalOpen}
+          onClose={() => setIsGroupModalOpen(false)}
+          groupToEdit={groupToEdit}
+          availableTags={tags}
+          initialTags={
+            groupToEdit ? groupToEdit.tags : tags.filter((t) => selectedTags.includes(t.name))
+          }
+          onSave={handleSaveGroup}
+          onDelete={handleDeleteGroup}
+        />
+      </div>
     </div>
   )
 }

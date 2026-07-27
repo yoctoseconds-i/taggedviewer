@@ -34,6 +34,7 @@ vi.mock('./hooks/useIpc', () => ({
       rescanLibrary: vi.fn(),
       version: '1.0.0',
       updateStatus: { available: false, checking: false },
+      dismissUpdate: vi.fn(),
       checkForUpdates: vi.fn(),
       openLibrary: vi.fn(),
       getCurrentLibrary: vi.fn().mockResolvedValue(null),
