@@ -355,14 +355,14 @@ export function setupIPC(mainWindow: BrowserWindow) {
             version: updateCheck.updateInfo.version,
             releaseNotes: updateCheck.updateInfo.releaseNotes,
             releaseDate: updateCheck.updateInfo.releaseDate,
-            htmlUrl: 'https://github.com/rshkkngtm08/taggedviewer/releases',
+            htmlUrl: 'https://github.com/yoctoseconds-i/taggedviewer/releases',
           }
         }
       }
 
       // Fallback or dev mode: fetch via GitHub REST API
       const response = await net.fetch(
-        'https://api.github.com/repos/rshkkngtm08/taggedviewer/releases/latest',
+        'https://api.github.com/repos/yoctoseconds-i/taggedviewer/releases/latest',
         {
           headers: { 'User-Agent': 'TaggedViewer-App' },
         }

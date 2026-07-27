@@ -11,7 +11,7 @@ files:
 
 publish:
   provider: github
-  owner: rshkkngtm08
+  owner: yoctoseconds-i
   repo: taggedviewer
 
 win:

@@ -20,7 +20,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
   }
 
   const handleOpenRelease = () => {
-    const url = updateStatus.htmlUrl || 'https://github.com/rshkkngtm08/taggedviewer/releases'
+    const url = updateStatus.htmlUrl || 'https://github.com/yoctoseconds-i/taggedviewer/releases'
     if ((window as any).electron?.shell) {
       ;(window as any).electron.shell.openExternal(url)
     } else {

@@ -36,7 +36,7 @@ export const useIpc = (loadData: () => void) => {
           releaseName: result.releaseName,
           releaseNotes: result.releaseNotes,
           releaseDate: result.releaseDate,
-          htmlUrl: result.htmlUrl || 'https://github.com/rshkkngtm08/taggedviewer/releases',
+          htmlUrl: result.htmlUrl || 'https://github.com/yoctoseconds-i/taggedviewer/releases',
           info: result,
           checking: false,
           dismissed: false,

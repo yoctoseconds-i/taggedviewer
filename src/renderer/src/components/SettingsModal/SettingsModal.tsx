@@ -117,7 +117,7 @@ export const SettingsModal = ({
                 <button
                   onClick={() =>
                     (window.electron as any).shell.openExternal(
-                      'https://github.com/rshkkngtm08/taggedviewer'
+                      'https://github.com/yoctoseconds-i/taggedviewer'
                     )
                   }
                   className="flex items-center gap-2 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors border border-zinc-600"
@@ -268,7 +268,7 @@ export const SettingsModal = ({
                   <button
                     onClick={() =>
                       (window.electron as any).shell.openExternal(
-                        'https://github.com/rshkkngtm08/taggedviewer/releases'
+                        'https://github.com/yoctoseconds-i/taggedviewer/releases'
                       )
                     }
                     className="px-3 py-1 bg-indigo-500 hover:bg-indigo-400 text-white text-[10px] font-bold rounded-md shadow-lg shadow-indigo-500/20 transition-all active:scale-95 whitespace-nowrap"
