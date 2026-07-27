@@ -347,13 +347,19 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
   ipcMain.handle('app:checkForUpdates', async () => {
     try {
+      const currentVersion = app.getVersion()
       if (app.isPackaged) {
         const updateCheck = await autoUpdater.checkForUpdatesAndNotify()
         if (updateCheck && updateCheck.updateInfo) {
+          const latestVersion = updateCheck.updateInfo.version
+          const isNewer = isVersionNewer(currentVersion, latestVersion)
           return {
-            available: true,
-            version: updateCheck.updateInfo.version,
-            releaseNotes: updateCheck.updateInfo.releaseNotes,
+            available: isNewer,
+            version: latestVersion,
+            releaseNotes:
+              typeof updateCheck.updateInfo.releaseNotes === 'string'
+                ? updateCheck.updateInfo.releaseNotes
+                : undefined,
             releaseDate: updateCheck.updateInfo.releaseDate,
             htmlUrl: 'https://github.com/yoctoseconds-i/taggedviewer/releases',
           }
@@ -378,7 +384,6 @@ export function setupIPC(mainWindow: BrowserWindow) {
         published_at: string
       }
       const latestVersion = data.tag_name ? data.tag_name.replace(/^v/, '') : ''
-      const currentVersion = app.getVersion()
 
       const isNewer = isVersionNewer(currentVersion, latestVersion)
       return {
