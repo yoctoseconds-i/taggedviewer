@@ -30,11 +30,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit Tests
-        run: npm run test:unit
-
       - name: Build
         run: npm run build
+
+      - name: Unit Tests
+        run: npm run test:unit
 
       - name: Build and Publish Release
         run: npx electron-builder --win --publish always
