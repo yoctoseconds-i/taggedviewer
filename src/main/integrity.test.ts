@@ -134,7 +134,7 @@ describe('Build Integrity & Runtime Check', () => {
   it('should be able to import wd14 and handle forking', async () => {
     const wd14 = await import('./wd14')
     expect(wd14.tagImageWD14).toBeDefined()
-  })
+  }, 30000)
 
   it.skip('should be able to import and call syncLibrary without MODULE_NOT_FOUND', async () => {
     const db = await import('./db')

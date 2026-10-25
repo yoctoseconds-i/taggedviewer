@@ -1,61 +1,100 @@
-# TaggedViewer
+# 🖼️ TaggedViewer
 
-画像に自動でタグを付け、効率的に管理・閲覧するための Electron アプリケーションです。
+> **ローカルAIの力で、大量の画像・AIイラストを一瞬で自動タグ付け＆スマート整理。**  
+> 完全ローカル完結型・超高速な Electron ベースのスマート画像ビューア。
 
-## 主な機能
+---
 
-### 🏷️ WD14 Tagger による自動タグ付け
+## 🌟 TaggedViewer とは？
 
-- Hugging Face のモデルを使用した、完全ローカルでの高速な画像解析。
-- 解析されたタグはデータベースに保存され、瞬時に検索・フィルタリングが可能。
+**「ローカルフォルダに溜まったAI画像やイラスト、探すのに苦労していませんか？」**
 
-### 🖼️ インタラクティブな個別ビュー (Lightbox)
+`TaggedViewer` は、Hugging Face の **WD14 Tagger (ONNX Runtime)** を内蔵し、外部サーバーに画像を一切送信することなく、完全ローカルで高速に画像を全自動解析・タグ付けする次世代の画像管理アプリケーションです。
 
-- **ダイナミック UI**: 閲覧を邪魔しないよう、ナビゲーションや情報パネルを動的に表示/非表示。
-- **情報パネル**: ファイルパスの確認、関連タグでのフィルタリング、エクスプローラー連携。
-- **スマート・スケーリング**: パネル表示に合わせて画像サイズを自動調整。
+---
 
-### 🌟 タグのお気に入り機能
+## ✨ 5つの主な特徴
 
-- よく使うタグをサイドバー上部にピン留め。
-- スターアイコンで簡単にお気に入り登録・解除が可能。
+### 1. 🤖 完全ローカル AI 自動タグ付け (WD14 Tagger)
 
-### 🚀 その他の特徴
+- **プライバシー完全重視**: 外部 API やクラウドを使わず、PC ローカル上で ONNX Runtime (WD14 ViT V2) を実行。
+- **マルチスレッド調整**: ご使用の PC スペックに合わせてスレッド数を自由調整（シングル〜アグレッシブ高速スキャン）。
 
-- **高速検索**: 低遅延なフィルタリング UI。
-- **エクスプローラー連携**: アプリから直接ファイルの保存場所を開くことが可能。
+### 2. 📝 AI 生成プロンプトの自動抽出 (PNG Info)
+- WebUI や ComfyUI などで生成された PNG 画像から、プロンプト、ネガティブプロンプト、Seed 値などのメタデータを瞬時に読み取って表示。
 
-## セットアップと実行
+### 3. 🔍 超高速タグ検索 ＆ タググループ
+- アニメ特徴・ポーズ・背景など、お好みのタグをまとめた**「カスタムタググループ」**を作成可能。
+- お気に入りタグのピン留め、非表示タグのフィルタリング、高速 AND/OR 検索に対応。
 
-### 開発環境の実行
+### 4. 🎬 ダイナミック Lightbox ＆ スライドショー
+- **ノイズレス UI**: 閲覧を邪魔しない洗練されたダイナミック操作パネル。
+- **スライドショー機能**: 表示順（通常/ランダム）や切替間隔を指定して、コレクションを快適に観賞。
+
+### 5. ⚡ ローカルファースト ＆ エクスプローラー連携
+- 低遅延なデータベース設計により、数万枚スケールのコレクションもサクサク快適に動作。
+- アプリ内から即座に OS のエクスプローラーでファイル位置を開くことが可能。
+
+---
+
+## 🚀 インストール ＆ 実行
+
+### 動作環境
+
+- **OS**: Windows 10/11
+- **Node.js**: v18 以降推奨
+
+### 開発モードの起動
 
 ```bash
+# リポジトリのクローン
+git clone https://github.com/yoctoseconds/taggedviewer.git
+cd taggedviewer
+
+# 依存関係のインストール
 npm install
+
+# 開発サーバー & Electron の起動
 npm run dev
 ```
 
-### ビルド
+### 本番ビルド (Windows Executable)
 
 ```bash
-npm run build
+npm run dist
+```
+`dist/` ディレクトリに実行可能ファイル (.exe) が出力されます。
+
+---
+
+## 🛠️ 技術スタック
+
+| レイヤー | 使用技術 / ライブリ |
+| :--- | :--- |
+| **Frontend** | React, Tailwind CSS, Lucide Icons, react-i18next |
+| **Desktop Shell** | Electron, Vite, electron-vite |
+| **AI / Machine Learning** | ONNX Runtime (WD14 ViT V2 Model) |
+| **Database / Metadata** | SQLite / LowDB |
+| **Image Processing** | Jimp |
+
+---
+
+## 🧪 テスト ＆ Lint
+
+```bash
+# ESLint & Prettier チェック
+npm run lint
+
+# 単体テスト (Vitest)
+npm run test:unit
+
+# E2Eテスト (Playwright)
+npm run test:e2e
 ```
 
-## テスト戦略
+---
 
-開発の効率と品質を両立させるため、以下のルールでテストを運用します。
+## 📄 ライセンス
 
-1.  **段階的なカバレッジ向上**:
-    - 全体のカバレッジを一度に上げることは目指しません。
-    - バグ修正や新機能追加の際、**その対象となるコンポーネントや関数に対して**テストを追加・修正します。
+MIT License
 
-2.  **テスト実行**:
-    - `npm run test` (Lint + Unit Test)
-    - `npm run test:coverage` (Coverage Report)
-
-## 技術スタック
-
-- **Frontend**: React, Tailwind CSS, Lucide React
-- **Backend/Desktop**: Electron, Vite
-- **Database**: LowDB
-- **AI/ML**: ONNX Runtime (WD14 ViT V2)
-- **Image Processing**: Jimp
