@@ -4,11 +4,13 @@ import { useTranslation } from 'react-i18next'
 interface ScanningProgressProps {
   current: number
   total: number
+  phase?: 'scanning' | 'tagging'
 }
 
-export const ScanningProgress = ({ current, total }: ScanningProgressProps) => {
+export const ScanningProgress = ({ current, total, phase = 'scanning' }: ScanningProgressProps) => {
   const { t } = useTranslation()
   const progress = total > 0 ? (current / total) * 100 : 0
+  const title = phase === 'tagging' ? t('gallery.tagging') : t('gallery.scanning')
 
   return (
     <div className="fixed bottom-6 right-6 z-40 animate-in slide-in-from-bottom-10 duration-500">
@@ -21,9 +23,7 @@ export const ScanningProgress = ({ current, total }: ScanningProgressProps) => {
         </div>
         <div className="flex-1">
           <div className="flex justify-between items-end mb-1.5">
-            <p className="text-xs font-black text-white uppercase tracking-tighter">
-              {t('gallery.scanning')}
-            </p>
+            <p className="text-xs font-black text-white uppercase tracking-tighter">{title}</p>
             <p className="text-[10px] font-mono text-gray-500">
               {current} / {total}
             </p>

@@ -353,7 +353,11 @@ function App(): JSX.Element {
           </div>
 
           {isScanning && (
-            <ScanningProgress current={scanProgress.current} total={scanProgress.total} />
+            <ScanningProgress
+              current={scanProgress.current}
+              total={scanProgress.total}
+              phase={scanProgress.phase}
+            />
           )}
 
           {selectedImageIndex !== null && images[selectedImageIndex] && (

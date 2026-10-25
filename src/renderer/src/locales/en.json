@@ -80,10 +80,10 @@
     "date": "Date",
     "name": "Name",
     "ext": "Extension",
-    "ext": "Extension",
     "random": "Random",
     "filters": "Filters:",
-    "scanning": "Scanning Library"
+    "scanning": "Scanning Library",
+    "tagging": "Generating Tags"
   },
   "common": {
     "cancel": "Cancel",

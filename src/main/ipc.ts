@@ -36,8 +36,14 @@ import { processQueue, setTargetThreads, stopQueue } from './services/QueueServi
 import { globalSettings } from './GlobalSettings'
 import { watcherService } from './services/WatcherService'
 
+let autoSyncTimer: NodeJS.Timeout | null = null
+
 async function stopBackgroundTasks() {
   console.log('[IPC] Stopping all background tasks...')
+  if (autoSyncTimer) {
+    clearTimeout(autoSyncTimer)
+    autoSyncTimer = null
+  }
   watcherService.stop()
   stopQueue()
   const { abortSync } = await import('./db')
@@ -57,30 +63,38 @@ export function setupIPC(mainWindow: BrowserWindow) {
       console.log(`[AutoSync] Settings: watchEnabled=${settings.watchEnabled}`)
       if (settings.watchEnabled) {
         console.log(`[AutoSync] Enabled for ${libPath}, starting sync and watch...`)
-        const startSync = () => {
-          console.log(`[AutoSync] Starting sync for ${libPath}...`)
-          syncLibrary
-            .run(mainWindow)
-            .then((res) => {
-              console.log(
-                `[AutoSync] Background sync completed. Added: ${res.added}, Removed: ${res.removed}`
-              )
-              if (res.added > 0) processQueue(mainWindow)
-            })
-            .catch((err) => {
-              console.error(`[AutoSync] Background sync failed:`, err)
-            })
+        const scheduleSync = () => {
+          if (autoSyncTimer) clearTimeout(autoSyncTimer)
+          // 起動直後のUI描画・サムネイル読み込みと競合しないよう数秒遅延して開始
+          autoSyncTimer = setTimeout(() => {
+            console.log(`[AutoSync] Starting delayed sync for ${libPath}...`)
+            syncLibrary
+              .run(mainWindow)
+              .then((res) => {
+                console.log(
+                  `[AutoSync] Background sync completed. Added: ${res.added}, Removed: ${res.removed}`
+                )
+                if (res.added > 0) processQueue(mainWindow)
+              })
+              .catch((err) => {
+                console.error(`[AutoSync] Background sync failed:`, err)
+              })
+          }, 3000)
         }
 
         if (mainWindow.webContents.isLoading()) {
           console.log(`[AutoSync] Window loading, waiting for did-finish-load...`)
-          mainWindow.webContents.once('did-finish-load', startSync)
+          mainWindow.webContents.once('did-finish-load', scheduleSync)
         } else {
-          startSync()
+          scheduleSync()
         }
         watcherService.start(libPath)
       } else {
         console.log(`[AutoSync] Disabled.`)
+        if (autoSyncTimer) {
+          clearTimeout(autoSyncTimer)
+          autoSyncTimer = null
+        }
         watcherService.stop()
       }
     } catch (e) {
@@ -311,6 +325,10 @@ export function setupIPC(mainWindow: BrowserWindow) {
         const libPath = dbManager.getCurrentLibraryPath()
         if (libPath) watcherService.start(libPath)
       } else {
+        if (autoSyncTimer) {
+          clearTimeout(autoSyncTimer)
+          autoSyncTimer = null
+        }
         watcherService.stop()
       }
     }
