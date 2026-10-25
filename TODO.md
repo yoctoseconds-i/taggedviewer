@@ -7,17 +7,20 @@
 > 詳細なボトルネック分析・設計・技術仕様については [PERFORMANCE_OPTIMIZATION.md](./PERFORMANCE_OPTIMIZATION.md) を参照してください。
 
 ### Phase 1: 体感速度の即時改善 (UIブロック解除 & DBクエリ最適化)
+
 - [x] **レンダラー起動時のブロック解除**: `App.tsx` の `init()` 内で `scan:resume` を `await` している処理を非同期化し、未処理画像があっても既存データを即座に描画・操作可能にする。
 - [x] **ソート用式インデックスの追加**: SQLite スキーマに `idx_images_date` (`COALESCE(file_modified_at, scanned_at) DESC`) を追加し、起動時の画像100件取得クエリでの全行ソート（フルスキャン）を解消する。
 - [x] **タグ集計クエリの最適化**: `getAllTags` の相関サブクエリを `LEFT JOIN` + `GROUP BY` に書き換え、タグ一覧取得時のオーバーヘッドを削減する。
 
 ### Phase 2: ディスクI/O・スキャナーの根本改善 (Dirent化 & 並行処理)
-- [ ] **`scanner.ts` の `Dirent` 化**: `fs.readdir(dir, { withFileTypes: true })` を採用し、ディレクトリ判定用の `fs.stat` を 0 回に削減する。
-- [ ] **画像ファイル `stat` の並行化**: 同一ディレクトリ内の対象画像ファイルに対する `fs.stat` を直列からバッチ並行処理へ変更し、NTFSでのI/O待機時間を大幅短縮する。
-- [ ] **除外ディレクトリのスキップ**: `.taggedviewer`、`.git`、`node_modules` などの隠し/システムフォルダを走査対象外にする。
-- [ ] **`syncLibrary` / `insertImagesBulk` の効率化**: 100件ごとの 10ms 無駄スリープの撤廃、DB差分チェックのバルク化、削除処理のトランザクション一括化。
+
+- [x] **`scanner.ts` の `Dirent` 化**: `fs.readdir(dir, { withFileTypes: true })` を採用し、ディレクトリ判定用の `fs.stat` を 0 回に削減する。
+- [x] **画像ファイル `stat` の並行化**: 同一ディレクトリ内の対象画像ファイルに対する `fs.stat` を直列からバッチ並行処理へ変更し、NTFSでのI/O待機時間を大幅短縮する。
+- [x] **除外ディレクトリのスキップ**: `.taggedviewer`、`.git`、`node_modules` などの隠し/システムフォルダを走査対象外にする。
+- [x] **`syncLibrary` / `insertImagesBulk` の効率化**: 100件ごとの 10ms 無駄スリープの撤廃、DB差分チェックのバルク化、削除処理のトランザクション一括化。
 
 ### Phase 3: 起動時同期シーケンスのスマート化と状況可視化
+
 - [ ] **起動時自動同期 (AutoSync) の遅延実行**: 起動直後は既存DBのキャッシュデータで即座にUIを描画し、ディスク全体の再同期はUI描画完了後数秒待ってからバックグラウンドで開始する。
 - [ ] **進捗通知によるリロード負荷の緩和**: `useIpc.ts` における `scan:progress` イベント時の `loadData` 再発行頻度を抑制する。
 - [ ] **起動・処理プロセスのリアルタイム表示**: ComfyUIのように、バックグラウンドで実行中の処理（例: 「ライブラリ同期中...」「タグ推論中...」など）をステータスバー等に1行でリアルタイム表示する。

@@ -19,6 +19,7 @@ import dbManager, {
   insertTag,
   linkImageTagsBulk,
   clearDatabase,
+  deleteImagesBulkByPaths,
 } from './db'
 
 describe('Database Phase 1 Performance & Query Tests', () => {
@@ -93,5 +94,31 @@ describe('Database Phase 1 Performance & Query Tests', () => {
     const asc = await getAllImages.all(10, 0, 'date', 'asc')
     expect(asc[0].filepath).toBe('old.png')
     expect(asc[1].filepath).toBe('new.png')
+  })
+
+  it('deleteImagesBulkByPaths should batch delete multiple images and their tag associations in a single transaction', async () => {
+    const images = await insertImagesBulk.run(['del1.png', 'del2.png', 'keep.png'])
+    const tag = await insertTag.run({ name: 'test-tag' })
+
+    await linkImageTagsBulk.run([
+      { imageId: images[0].id, tagId: tag.lastInsertRowid as number },
+      { imageId: images[1].id, tagId: tag.lastInsertRowid as number },
+      { imageId: images[2].id, tagId: tag.lastInsertRowid as number },
+    ])
+
+    const deletedCount = await deleteImagesBulkByPaths.run([
+      'del1.png',
+      'del2.png',
+      'nonexistent.png',
+    ])
+    expect(deletedCount).toBe(2)
+
+    const remainingImages = await getAllImages.all()
+    expect(remainingImages.length).toBe(1)
+    expect(remainingImages[0].filepath).toBe('keep.png')
+
+    const tags = await getAllTags.all()
+    const testTag = tags.find((t) => t.name === 'test-tag')
+    expect(testTag?.count).toBe(1)
   })
 })

@@ -185,7 +185,7 @@ export function setupIPC(mainWindow: BrowserWindow) {
 
     if (!dbManager.isOpen()) throw new Error('No library open')
 
-    const BATCH_SIZE = 100
+    const BATCH_SIZE = 500
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
       if (mainWindow.isDestroyed()) return { success: false, count: 0 }
       const batch = files.slice(i, i + BATCH_SIZE)
