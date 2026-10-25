@@ -167,6 +167,7 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_image_tags_composite ON image_tags(tag_id, image_id);
       CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
       CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_images_date ON images(COALESCE(file_modified_at, scanned_at) DESC);
       CREATE INDEX IF NOT EXISTS idx_image_tags_image_id ON image_tags(image_id);
       
       CREATE TABLE IF NOT EXISTS tag_groups (
@@ -344,8 +345,10 @@ export const getAllTags = {
     return dbManager.db
       .prepare(
         `
-      SELECT t.*, (SELECT COUNT(*) FROM image_tags it WHERE it.tag_id = t.id) as count
+      SELECT t.id, t.name, t.is_favorite, t.is_hidden, COUNT(it.image_id) as count
       FROM tags t
+      LEFT JOIN image_tags it ON it.tag_id = t.id
+      GROUP BY t.id
       ORDER BY t.is_hidden ASC, t.name ASC
     `
       )

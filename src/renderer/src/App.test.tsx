@@ -89,4 +89,40 @@ describe('App', () => {
       expect(screen.getByText('app.emptyLibrary')).toBeInTheDocument()
     })
   })
+
+  it('does not block UI initialization even if scan:resume is pending', async () => {
+    // scan:resume never resolves immediately (simulating long background queue processing)
+    let resolveScanResume: () => void = () => {}
+    mockInvoke.mockImplementation((channel) => {
+      switch (channel) {
+        case 'settings:get':
+          return Promise.resolve({ threadCount: 2 })
+        case 'scan:resume':
+          return new Promise<void>((resolve) => {
+            resolveScanResume = resolve
+          })
+        case 'db:getImageCount':
+          return Promise.resolve(0)
+        case 'db:getImages':
+          return Promise.resolve([])
+        case 'db:getTags':
+          return Promise.resolve([])
+        case 'db:getTagGroups':
+          return Promise.resolve([])
+        default:
+          return Promise.resolve(null)
+      }
+    })
+
+    render(<App />)
+
+    // UI should still finish initial loading and show emptyLibrary without waiting for scan:resume
+    await waitFor(() => {
+      expect(screen.getByText('app.emptyLibrary')).toBeInTheDocument()
+      expect(mockInvoke).toHaveBeenCalledWith('db:getTagGroups')
+    })
+
+    // Clean up pending promise
+    resolveScanResume()
+  })
 })

@@ -111,7 +111,6 @@ function App(): JSX.Element {
 
   const {
     isScanning,
-    setIsScanning,
     scanProgress,
     openFolder,
     toggleFavorite,
@@ -139,15 +138,17 @@ function App(): JSX.Element {
         }
       }
 
-      setIsScanning(true)
-      // @ts-ignore
-      await window.electron.ipcRenderer.invoke('scan:resume')
-      setIsScanning(false)
       setLibraryPathStr(await getCurrentLibrary())
       loadTagGroups()
+
+      // 未処理画像のタグ付けキューはバックグラウンドで再開し、UI初期化完了をブロックしない
+      // @ts-ignore
+      window.electron.ipcRenderer.invoke('scan:resume').catch((err) => {
+        console.error('[App] Failed to resume background scan:', err)
+      })
     }
     init()
-  }, [setIsScanning, loadTagGroups, i18n, getCurrentLibrary])
+  }, [loadTagGroups, i18n, getCurrentLibrary])
 
   useEffect(() => {
     setImages([])

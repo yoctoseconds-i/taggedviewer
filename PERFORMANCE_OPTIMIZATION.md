@@ -1,0 +1,133 @@
+# パフォーマンス改善仕様書 (起動高速化 & ディスクI/O最適化)
+
+本ドキュメントは、TaggedViewer において管理画像数が多い（数千〜数十万枚）環境で発生する起動遅延およびディスクI/Oボトルネックを解消するための仕様および改善計画をまとめたものです。
+
+---
+
+## 1. 現状の課題とボトルネック分析
+
+### 1.1 現象
+- 大量の画像を管理しているライブラリを開いている場合、アプリを起動してからギャラリーが表示され操作可能になるまでに数十秒〜数分以上の待機時間が発生する。
+- 起動時にディスクI/OとメインプロセスのCPU使用率が高止まりし、UIが無応答または極めてもたつく。
+
+### 1.2 ボトルネックの根本原因
+
+| 箇所 | 対象ファイル | 原因 | 影響度 |
+| :--- | :--- | :--- | :--- |
+| **UI初期化のブロッキング** | `src/renderer/src/App.tsx` | 起動時 `init()` 内で `await scan:resume` を実行しているため、未処理画像のタグ推論・メタデータ抽出がすべて完了するまでUI初期化が停止する。 | **致命的 (極大)** |
+| **直列ディスクI/O** | `src/main/scanner.ts` | `fs.readdir` 後、全エントリに対して1件ずつ直列で `await fs.stat` を呼び出している。NTFSでの直列システムコールの待機時間が膨大になる。 | **極大** |
+| **全件フルスキャンクエリ** | `src/main/db.ts` | デフォルトソート `ORDER BY COALESCE(file_modified_at, scanned_at) DESC` に対応するインデックスが存在せず、初回画像取得時に毎回全件のテンポラリB-Treeソートが発生する。 | **大** |
+| **タグ相関サブクエリ** | `src/main/db.ts` | `getAllTags` で各タグごとに `(SELECT COUNT(*) FROM image_tags WHERE tag_id = t.id)` を実行しており、タグ数×インデックスシークが発生する。 | **中〜大** |
+| **起動時同期のオーバーヘッド** | `src/main/ipc.ts`<br>`src/main/db.ts` | 起動時にライブラリ全体の全走査（`syncLibrary`）が即実行され、100件ごとに10msの無駄スリープや1件ごとのDB `SELECT` が行われる。 | **大** |
+| **IPCリロード嵐** | `src/renderer/src/hooks/useIpc.ts` | スキャン進捗イベント（`scan:progress`）により、500msごとに重いDBクエリ（`loadData`）が再発行され、メインスレッドを圧迫する。 | **中** |
+
+---
+
+## 2. 改善フェーズと仕様詳細
+
+改善は安全に段階を踏んで実施できるように、以下の3フェーズに分割します。
+
+```
+Phase 1: 体感速度の即時改善 (UIブロック解除 & DBクエリ最適化)
+   │
+Phase 2: ディスクI/O・スキャナーの根本改善 (Dirent化 & 並行化)
+   │
+Phase 3: 起動時同期シーケンスのスマート化 (遅延同期 & 状況可視化)
+```
+
+---
+
+### Phase 1: 体感速度の即時改善（UIブロック解除 & DB最適化）
+
+起動後、ディスク走査やバックグラウンド処理の完了を待たずに**即座に既存DBデータでUIを表示・操作可能にする**ことを目的とします。
+
+#### 1. `scan:resume` の非ブロッキング化
+- **対象**: `src/renderer/src/App.tsx`
+- **仕様**:
+  - `init()` 内で `await window.electron.ipcRenderer.invoke('scan:resume')` している処理を、`await` なしで非同期にキックする（または `setIsScanning(true)` を外す）。
+  - レンダラーは起動直後に即座に `getCurrentLibrary()` と `loadTagGroups()` を完了し、既存の画像を即座に描画する。
+  - バックグラウンドで進行するタグ付け推論の進捗は、既存の `scan:progress` イベントで受け取る。
+
+#### 2. SQLite 式インデックス（Expression Index）の追加
+- **対象**: `src/main/db.ts` (`initSchema`)
+- **仕様**:
+  - デフォルトのソート句に対応する式インデックスを追加する:
+    ```sql
+    CREATE INDEX IF NOT EXISTS idx_images_date ON images(COALESCE(file_modified_at, scanned_at) DESC);
+    ```
+  - これにより、`getAllImages` (`LIMIT 100 OFFSET 0`) の実行時に数万〜数十万件の全行ソートを回避し、インデックスレンジスキャンにより一瞬（0〜1ms）で先頭100件を取得可能にする。
+
+#### 3. タグ集計クエリ (`getAllTags`) の最適化
+- **対象**: `src/main/db.ts` (`getAllTags`)
+- **仕様**:
+  - 相関サブクエリから `LEFT JOIN` + `GROUP BY` に書き換える:
+    ```sql
+    SELECT t.id, t.name, t.is_favorite, t.is_hidden, COUNT(it.image_id) AS count
+    FROM tags t
+    LEFT JOIN image_tags it ON it.tag_id = t.id
+    GROUP BY t.id
+    ORDER BY t.is_hidden ASC, t.name ASC
+    ```
+  - SQLite のクエリオプティマイザが1回の結合スキャンで集計を行えるようにし、タグ一覧取得のレスポンスを向上させる。
+
+---
+
+### Phase 2: ディスクI/O・スキャナーの根本改善
+
+ライブラリ新規登録時、再スキャン時、およびバックグラウンド同期時のディスク負荷と処理時間を劇的に削減します。
+
+#### 1. `scanner.ts` の `Dirent` 化による `stat` 呼び出し削減
+- **対象**: `src/main/scanner.ts`
+- **仕様**:
+  - `fs.readdir(dir, { withFileTypes: true })` を使用する。
+  - `dirent.isDirectory()` により、ディレクトリ判定のための `fs.stat` システムコールを完全に不要（0回）にする。
+  - `.taggedviewer`、`.git`、`node_modules` などの除外対象ディレクトリは、再帰せずに即座にスキップする。
+  - 対象の画像拡張子を持つファイルについてのみ `fs.stat` を取得する。
+
+#### 2. 画像ファイル `stat` のバッチ並行処理
+- **対象**: `src/main/scanner.ts`
+- **仕様**:
+  - 同一ディレクトリ内の対象画像ファイルに対する `fs.stat` 呼び出しを、直列 `for...of await` から並列化（同時実行数リミット付き、または `Promise.all`）に変更する。
+  - Windows NTFS での I/O スループットを向上させ、スキャン時間を大幅に短縮する。
+
+#### 3. `syncLibrary` と `insertImagesBulk` の効率化
+- **対象**: `src/main/db.ts`
+- **仕様**:
+  - **スリープの撤廃**: 100件ごとの `setTimeout(10)` を撤廃し、UI応答性を保つための `setImmediate` のみに留める。
+  - **既存チェックのバルク化**: 1件ずつ `SELECT id FROM images WHERE filepath = ?` を投げるのをやめ、インメモリ `Set` やバッチクエリ（`INSERT OR IGNORE` 等）を用いて不要なクエリ発行を抑制する。
+  - **削除チェックの一括化**: 削除対象ファイルが存在する場合、1件ごとのトランザクションではなく、単一のトランザクション内で一括削除する。
+
+---
+
+### Phase 3: 起動時同期シーケンスのスマート化と状況可視化
+
+起動時の体感品質をさらに向上させ、裏で何が起きているかをユーザーが把握できるようにします。
+
+#### 1. 起動時自動同期（AutoSync）の遅延実行
+- **対象**: `src/main/ipc.ts` (`checkAutoSync`)
+- **仕様**:
+  - アプリ起動直後は、既存DBの内容で即座にUIを描画することを最優先とする。
+  - ディスク全体を走査する `syncLibrary.run()` は、アプリ起動完了後数秒経過してから、またはアイドル時にバックグラウンド低優先度で実行する。
+  - 変更検知は主に `WatcherService` (chokidar) に任せ、起動時の重い同期処理がUI描画と衝突しないようにする。
+
+#### 2. 進捗通知によるリロード負荷の緩和
+- **対象**: `src/renderer/src/hooks/useIpc.ts`
+- **仕様**:
+  - `scan:progress` を受けるたびに `loadData()` でタグ一覧や画像一覧全体を再取得する頻度を抑制（完了時のみ再取得、またはスロットル間隔を広げる）。
+
+#### 3. 起動・同期状況の可視化（ComfyUI風ステータス表示）
+- **対象**: レンダラーUI / メインプロセス
+- **仕様**:
+  - バックグラウンドでスキャンやタグ推論が走っている場合、画面隅（ステータスバー等）に「ライブラリ同期中 (450/1200)...」「タグ付け推論中 (12/100)...」のように軽量な1行ステータスを表示する。
+  - アプリの操作を遮らず、進捗状況が自然に確認できるようにする。
+
+---
+
+## 3. テストと検証方針
+
+- **単体テスト**:
+  - `db.ts` の式インデックス作成、`getAllTags` 最適化、`insertImagesBulk` の動作確認。
+  - `scanner.ts` の走査結果が正しく除外フォルダをスキップし、全画像ファイルを漏れなく検出できるかのテスト。
+- **リグレッションテスト**:
+  - 既存のすべてのテストスイート (`npm run test:unit`) が通過すること。
+  - ESLint / Prettier (`npm run lint`) の警告・エラーが0であること。
