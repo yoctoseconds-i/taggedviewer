@@ -21,17 +21,21 @@
 - **マルチスレッド調整**: ご使用の PC スペックに合わせてスレッド数を自由調整（シングル〜アグレッシブ高速スキャン）。
 
 ### 2. 📝 AI 生成プロンプトの自動抽出 (PNG Info)
+
 - WebUI や ComfyUI などで生成された PNG 画像から、プロンプト、ネガティブプロンプト、Seed 値などのメタデータを瞬時に読み取って表示。
 
 ### 3. 🔍 超高速タグ検索 ＆ タググループ
+
 - アニメ特徴・ポーズ・背景など、お好みのタグをまとめた**「カスタムタググループ」**を作成可能。
 - お気に入りタグのピン留め、非表示タグのフィルタリング、高速 AND/OR 検索に対応。
 
 ### 4. 🎬 ダイナミック Lightbox ＆ スライドショー
+
 - **ノイズレス UI**: 閲覧を邪魔しない洗練されたダイナミック操作パネル。
 - **スライドショー機能**: 表示順（通常/ランダム）や切替間隔を指定して、コレクションを快適に観賞。
 
 ### 5. ⚡ ローカルファースト ＆ エクスプローラー連携
+
 - 低遅延なデータベース設計により、数万枚スケールのコレクションもサクサク快適に動作。
 - アプリ内から即座に OS のエクスプローラーでファイル位置を開くことが可能。
 
@@ -63,19 +67,20 @@ npm run dev
 ```bash
 npm run dist
 ```
+
 `dist/` ディレクトリに実行可能ファイル (.exe) が出力されます。
 
 ---
 
 ## 🛠️ 技術スタック
 
-| レイヤー | 使用技術 / ライブリ |
-| :--- | :--- |
-| **Frontend** | React, Tailwind CSS, Lucide Icons, react-i18next |
-| **Desktop Shell** | Electron, Vite, electron-vite |
-| **AI / Machine Learning** | ONNX Runtime (WD14 ViT V2 Model) |
-| **Database / Metadata** | SQLite / LowDB |
-| **Image Processing** | Jimp |
+| レイヤー                  | 使用技術 / ライブリ                              |
+| :------------------------ | :----------------------------------------------- |
+| **Frontend**              | React, Tailwind CSS, Lucide Icons, react-i18next |
+| **Desktop Shell**         | Electron, Vite, electron-vite                    |
+| **AI / Machine Learning** | ONNX Runtime (WD14 ViT V2 Model)                 |
+| **Database / Metadata**   | SQLite / LowDB                                   |
+| **Image Processing**      | Jimp                                             |
 
 ---
 
@@ -97,4 +102,3 @@ npm run test:e2e
 ## 📄 ライセンス
 
 MIT License
-

@@ -1,7 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { generateTags } from '../tagger'
 import { getUnprocessedImages, getSettings, processImageResultsBulk } from '../db'
-import { getImageMetadata, extractPromptTags } from './MetadataService'
 
 let currentTargetThreads = 2
 let isProcessing = false
@@ -66,17 +65,6 @@ export async function processQueue(win: BrowserWindow) {
 
         try {
           const tags = await generateTags(image.filepath)
-
-          // Extract tags from metadata
-          const meta = await getImageMetadata(image.filepath)
-          if (meta && meta.text && meta.text.parameters) {
-            const promptTags = extractPromptTags(meta.text.parameters)
-            for (const pt of promptTags) {
-              if (!tags.includes(pt)) {
-                tags.push(pt)
-              }
-            }
-          }
 
           resultsBuffer.push({ imageId: image.id, tagNames: tags })
           processedCount++

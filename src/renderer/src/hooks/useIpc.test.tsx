@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useIpc } from './useIpc'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
@@ -58,5 +58,34 @@ describe('useIpc hook', () => {
 
     expect(mockRemoveAllListeners).toHaveBeenCalledWith('scan:progress')
     expect(mockRemoveAllListeners).toHaveBeenCalledWith('scan:complete')
+  })
+
+  it('updates scanProgress with correct phase for scanning vs tagging', () => {
+    let progressCallback: any = null
+    mockOn.mockImplementation((event, cb) => {
+      if (event === 'scan:progress') {
+        progressCallback = cb
+      }
+    })
+
+    const { result } = renderHook(() => useIpc(mockLoadData))
+
+    // 1. Scanning phase (no image)
+    act(() => {
+      progressCallback(null, { total: 100, current: 10 })
+    })
+    expect(result.current.scanProgress.phase).toBe('scanning')
+    expect(result.current.isScanning).toBe(true)
+
+    // 2. Tagging phase (with image)
+    act(() => {
+      progressCallback(null, {
+        total: 100,
+        current: 50,
+        image: { id: 1, filepath: 'a.png', scanned_at: '' },
+      })
+    })
+    expect(result.current.scanProgress.phase).toBe('tagging')
+    expect(result.current.isScanning).toBe(true)
   })
 })

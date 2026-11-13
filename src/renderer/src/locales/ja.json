@@ -83,10 +83,10 @@
     "date": "日付",
     "name": "名前",
     "ext": "拡張子",
-    "ext": "拡張子",
     "random": "ランダム",
     "filters": "フィルタ:",
-    "scanning": "ライブラリをスキャン中"
+    "scanning": "ライブラリをスキャン中",
+    "tagging": "AIタグを生成中"
   },
   "common": {
     "cancel": "キャンセル",

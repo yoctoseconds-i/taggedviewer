@@ -167,6 +167,7 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_image_tags_composite ON image_tags(tag_id, image_id);
       CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
       CREATE INDEX IF NOT EXISTS idx_images_file_modified_at ON images(file_modified_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_images_date ON images(COALESCE(file_modified_at, scanned_at) DESC);
       CREATE INDEX IF NOT EXISTS idx_image_tags_image_id ON image_tags(image_id);
       
       CREATE TABLE IF NOT EXISTS tag_groups (
@@ -344,8 +345,10 @@ export const getAllTags = {
     return dbManager.db
       .prepare(
         `
-      SELECT t.*, (SELECT COUNT(*) FROM image_tags it WHERE it.tag_id = t.id) as count
+      SELECT t.id, t.name, t.is_favorite, t.is_hidden, COUNT(it.image_id) as count
       FROM tags t
+      LEFT JOIN image_tags it ON it.tag_id = t.id
+      GROUP BY t.id
       ORDER BY t.is_hidden ASC, t.name ASC
     `
       )
@@ -509,6 +512,28 @@ export const deleteImageByPath = {
   },
 }
 
+export const deleteImagesBulkByPaths = {
+  run: async (filepaths: string[]) => {
+    const db = dbManager.db
+    let count = 0
+    const getImgStmt = db.prepare('SELECT id FROM images WHERE filepath = ?')
+    const delTagsStmt = db.prepare('DELETE FROM image_tags WHERE image_id = ?')
+    const delImgStmt = db.prepare('DELETE FROM images WHERE id = ?')
+
+    db.transaction(() => {
+      for (const filepath of filepaths) {
+        const img = getImgStmt.get(filepath) as any
+        if (img) {
+          delTagsStmt.run(img.id)
+          delImgStmt.run(img.id)
+          count++
+        }
+      }
+    })()
+    return count
+  },
+}
+
 export const getSettings = {
   get: async () => {
     const db = dbManager.db
@@ -667,7 +692,7 @@ export const syncLibrary = {
     const db = dbManager.db
 
     // 1. Find and add new files
-    const BATCH_SIZE = 100
+    const BATCH_SIZE = 500
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
       if (isSyncAborted) {
         console.log('[DB] Sync aborted during add phase.')
@@ -694,7 +719,7 @@ export const syncLibrary = {
         })
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise((resolve) => setImmediate(resolve))
     }
 
     if (options.skipCleanup) {
@@ -728,18 +753,18 @@ export const syncLibrary = {
 
     if (toDelete.length > 0) {
       console.log(`[DB] Sync: Removing ${toDelete.length} missing files in scope.`)
-      for (let i = 0; i < toDelete.length; i++) {
+      const DELETE_BATCH_SIZE = 500
+      for (let i = 0; i < toDelete.length; i += DELETE_BATCH_SIZE) {
         if (isSyncAborted) {
           console.log('[DB] Sync aborted during cleanup phase.')
           break
         }
         if (mainWindow && mainWindow.isDestroyed()) break
-        await deleteImageByPath.run({ filepath: toDelete[i] })
-        removedCount++
+        const batch = toDelete.slice(i, i + DELETE_BATCH_SIZE)
+        const deleted = await deleteImagesBulkByPaths.run(batch)
+        removedCount += deleted
 
-        if (i % 50 === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
+        await new Promise((resolve) => setImmediate(resolve))
       }
     }
 

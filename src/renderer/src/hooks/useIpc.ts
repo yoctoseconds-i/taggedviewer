@@ -13,9 +13,19 @@ export interface UpdateStatus {
   dismissed?: boolean
 }
 
+export interface ScanProgress {
+  current: number
+  total: number
+  phase?: 'scanning' | 'tagging'
+}
+
 export const useIpc = (loadData: () => void) => {
   const [isScanning, setIsScanning] = useState(false)
-  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 })
+  const [scanProgress, setScanProgress] = useState<ScanProgress>({
+    current: 0,
+    total: 0,
+    phase: 'scanning',
+  })
   const [version, setVersion] = useState<string>('')
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({
     available: false,
@@ -58,12 +68,13 @@ export const useIpc = (loadData: () => void) => {
     window.electron.ipcRenderer.on(
       'scan:progress',
       (_, data: { total: number; current: number; image?: Image; tags?: Tag[] }) => {
-        setScanProgress({ total: data.total, current: data.current })
+        const phase = data.image ? 'tagging' : 'scanning'
+        setScanProgress({ total: data.total, current: data.current, phase })
         setIsScanning(data.current < data.total)
 
-        // Throttle data reload during scan
+        // Throttle data reload during scan: 進行中は2秒間隔、または完了時に即時リロード
         const now = Date.now()
-        if (now - lastReloadRef.current > 500 || data.current === data.total) {
+        if (now - lastReloadRef.current > 2000 || data.current === data.total) {
           lastReloadRef.current = now
           loadData()
         }
