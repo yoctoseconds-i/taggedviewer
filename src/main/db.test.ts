@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import { join } from 'path'
 import { rmSync, existsSync } from 'fs'
 
@@ -25,12 +25,19 @@ import dbManager, {
 describe('Database Phase 1 Performance & Query Tests', () => {
   const testLibPath = join(process.cwd(), 'out', 'test-lib-phase1')
 
-  beforeEach(async () => {
+  beforeAll(() => {
+    if (existsSync(testLibPath)) {
+      try {
+        rmSync(testLibPath, { recursive: true, force: true })
+      } catch {
+        // Ignore cleanup error
+      }
+    }
     dbManager.connect(testLibPath)
-    await clearDatabase.run()
   })
 
-  afterEach(async () => {
+  afterAll(() => {
+    dbManager.close()
     if (existsSync(testLibPath)) {
       try {
         rmSync(testLibPath, { recursive: true, force: true })
@@ -38,6 +45,10 @@ describe('Database Phase 1 Performance & Query Tests', () => {
         // Ignore cleanup error on windows
       }
     }
+  })
+
+  beforeEach(async () => {
+    await clearDatabase.run()
   })
 
   it('should use expression index idx_images_date for date sorting', async () => {

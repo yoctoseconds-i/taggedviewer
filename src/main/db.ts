@@ -71,6 +71,14 @@ class DatabaseManager {
     return !!this._db
   }
 
+  close() {
+    if (this._db) {
+      this._db.close()
+      this._db = null
+      this.currentLibraryPath = null
+    }
+  }
+
   getCurrentLibraryPath() {
     return this.currentLibraryPath
   }
