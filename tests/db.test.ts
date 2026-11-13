@@ -20,7 +20,7 @@ import dbManager, {
   linkImageTagsBulk,
   clearDatabase,
   deleteImagesBulkByPaths,
-} from './db'
+} from '../src/main/db'
 
 describe('Database Phase 1 Performance & Query Tests', () => {
   const testLibPath = join(process.cwd(), 'out', 'test-lib-phase1')
